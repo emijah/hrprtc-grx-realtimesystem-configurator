@@ -1,0 +1,12 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: RealtimesystemConfigurator Plug-in
+Bundle-SymbolicName: com.generalrobotix.ui.realtimesystem_configurator
+Bundle-Version: 1.0.0
+Bundle-ClassPath: com.generalrobotix.ui.rtsystemconfig/
+Bundle-Activator: com.generalrobotix.ui.realtimesystem_configurator.Activator
+Bundle-Vendor: General Roboix, Inc.
+Bundle-Localization: plugin
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime
+Eclipse-LazyStart: true
