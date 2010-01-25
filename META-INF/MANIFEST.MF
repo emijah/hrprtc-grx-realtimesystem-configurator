@@ -1,9 +1,14 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: RealtimesystemConfigurator Plug-in
-Bundle-SymbolicName: com.generalrobotix.ui.realtimesystem_configurator
+Bundle-SymbolicName: com.generalrobotix.ui.realtimesystem_configurator;singleton:=true
 Bundle-Version: 1.0.0
-Bundle-ClassPath: com.generalrobotix.ui.rtsystemconfig/
+Bundle-ClassPath: src/com/generalrobotix/ui/realtimesystem_configurator/,
+ libs/commons-logging.jar,
+ libs/jaxb-impl.jar,
+ libs/log4j-1.2.15.jar,
+ libs/profile_operator.jar,
+ libs/RTRepositoryServiceClient.jar
 Bundle-Activator: com.generalrobotix.ui.realtimesystem_configurator.Activator
 Bundle-Vendor: General Roboix, Inc.
 Bundle-Localization: plugin
