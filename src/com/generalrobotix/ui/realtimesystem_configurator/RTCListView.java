@@ -90,7 +90,7 @@ public class RTCListView extends ViewPart {
 				fdlg.open();
 				String fname = fdlg.getFileName();
 				if ( fname != null && fname != "" ) {
-					profile = getRTSProfile(fname);
+					profile = getRTSProfile(fdlg.getFilterPath()+java.io.File.separator+fname);
 					viewer.refresh();
 					try {
 						createProjectDir(fname.replace(".xml", ""));
