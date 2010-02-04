@@ -41,6 +41,30 @@
                relationship="right"
                relative="org.eclipse.ui.view.editors"/>
          <view
+               id="org.eclipse.ui.view.PropertySheet"
+               relationship="stack"
+               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
+         <view
+               id="org.eclipse.ui.console.ConsoleView"
+               relationship="stack"
+               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
+         <view
+               id="jp.go.aist.rtm.repositoryView.ui.views.RepositoryView"
+               relationship="stack"
+               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
+         <view
+               id="jp.go.aist.rtm.nameserviceview.ui.views.nameserviceview.NameServiceView"
+               relationship="stack"
+               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
+         <view
+               id="com.generalrobotix.ui.realtimesystem_configurator.toplogyview"
+               relationship="stack"
+               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
+         <view
+               id="com.generalrobotix.ui.realtimesystem_configurator.benchtestoperator"
+               relationship="stack"
+               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
+         <view
                id="org.eclipse.ui."
                relationship="stack"/>
       </perspectiveExtension>
