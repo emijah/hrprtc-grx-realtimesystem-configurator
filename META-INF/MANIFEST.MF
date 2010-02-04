@@ -1,0 +1,22 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: RealtimesystemConfigurator Plug-in
+Bundle-SymbolicName: com.generalrobotix.ui.realtimesystem_configurator;singleton:=true
+Bundle-Version: 1.0.0
+Bundle-ClassPath: src/com/generalrobotix/ui/realtimesystem_configurator/,
+ libs/commons-logging.jar,
+ libs/jaxb-impl.jar,
+ libs/log4j-1.2.15.jar,
+ libs/profile_operator.jar,
+ libs/RTRepositoryServiceClient.jar,
+ libs/OpenRTM-aist-1.0.0.jar,
+ libs/jcommon-1.0.16.jar,
+ libs/jfreechart-1.0.13.jar,
+ libs/jfreechart-1.0.13-swt.jar
+Bundle-Activator: com.generalrobotix.ui.realtimesystem_configurator.Activator
+Bundle-Vendor: General Roboix, Inc.
+Bundle-Localization: plugin
+Require-Bundle: org.eclipse.ui,
+ org.eclipse.core.runtime,
+ org.eclipse.core.resources
+Eclipse-LazyStart: true
