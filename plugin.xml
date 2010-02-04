@@ -49,7 +49,7 @@
                relationship="stack"
                relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
          <view
-               id="jp.go.aist.rtm.repositoryView.ui.views.RepositoryView"
+               id="jp.go.aist.rtm.repositoryView.view"
                relationship="stack"
                relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
          <view
@@ -57,7 +57,7 @@
                relationship="stack"
                relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
          <view
-               id="com.generalrobotix.ui.realtimesystem_configurator.toplogyview"
+               id="com.generalrobotix.ui.realtimesystem_configurator.topologyview"
                relationship="stack"
                relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
          <view
@@ -65,8 +65,9 @@
                relationship="stack"
                relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
          <view
-               id="org.eclipse.ui."
-               relationship="stack"/>
+               id="com.generalrobotix.ui.realtimesystem_configurator.timingchartview"
+               relationship="stack"
+               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
       </perspectiveExtension>
    </extension>
 
