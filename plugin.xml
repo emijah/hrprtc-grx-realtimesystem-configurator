@@ -24,8 +24,8 @@
             id="com.generalrobotix.ui.realtimesystem_configurator.timingchartview"
             name="Timing Chart"/>
       <view
-            class="com.generalrobotix.ui.realtimesystem_configurator.RTSystemToplogyView"
-            id="com.generalrobotix.ui.realtimesystem_configurator.toplogyview"
+            class="com.generalrobotix.ui.realtimesystem_configurator.RTSystemTopologyView"
+            id="com.generalrobotix.ui.realtimesystem_configurator.topologyview"
             name="RTSysytem Topology"/>
       <view
             class="com.generalrobotix.ui.realtimesystem_configurator.BenchTestOperatorView"
