@@ -15,7 +15,7 @@
             name="Realtime System Configurator"/>
       <view
             allowMultiple="false"
-            category="com.generalrobotix.ui.realtimesystem_configurator.category"
+            category="Realtime System Configurator"
             class="com.generalrobotix.ui.realtimesystem_configurator.execution_context_view"
             id="com.generalrobotix.ui.realtimesystem_configurator.execution_context_view"
             name="Execution Contexts"/>
@@ -24,6 +24,11 @@
             class="com.generalrobotix.ui.realtimesystem_configurator.RTCListView"
             id="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"
             name="RTC List"/>
+      <view
+            category="Realtime System Configurator"
+            class="com.generalrobotix.ui.realtimesystem_configurator.TimingChartView"
+            id="com.generalrobotix.ui.realtimesystem_configurator.timingchartview"
+            name="TimingChart"/>
    </extension>
    <extension
          point="org.eclipse.ui.perspectiveExtensions">

@@ -1,8 +1,18 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
+import java.io.ByteArrayInputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IWorkspaceRoot;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IProgressMonitor;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
@@ -10,6 +20,8 @@ import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.action.Separator;
 import org.eclipse.jface.dialogs.MessageDialog;
+import org.eclipse.jface.dialogs.ProgressMonitorDialog;
+import org.eclipse.jface.operation.IRunnableWithProgress;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.ISelection;
@@ -47,60 +59,12 @@ public class RTCListView extends ViewPart {
 	private Action action1;
 	private Action action2;
 	private Action doubleClickAction;
-	
+
     public RTSystemProfileOperator rtsProfileOperator = new RTSystemProfileOperator();
     private RtsProfile profile; 
     
-	/*
-	 * The content provider class is responsible for
-	 * providing objects to the view. It can wrap
-	 * existing objects in adapters or simply return
-	 * objects as-is. These objects may be sensitive
-	 * to the current input of the view, or ignore
-	 * it and always show the same content 
-	 * (like Task List, for example).
-	 */
-	 
-	class ViewContentProvider implements IStructuredContentProvider {
-		public void inputChanged(Viewer v, Object oldInput, Object newInput) {
-		}
-		public void dispose() {
-		}
-		public Object[] getElements(Object parent) {
-			if ( profile != null) {
-				return profile.getComponent().toArray();
-			}
-			return new Object[]{};
-		}
-	}
-	
-	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider {
-		public String getColumnText(Object obj, int index) {
-			Component comp = (Component)obj;
-			switch(index) {
-			case 0:
-				return comp.getInstanceName();
-			case 1:
-				return comp.getCompositeType();
-			case 2:
-				return comp.getPathUri();
-			case 3:
-				return comp.getId();
-			default:
-				break;
-			}
-			return getText(obj);
-		}
-		public Image getColumnImage(Object obj, int index) {
-			return getImage(obj);
-		}
-		public Image getImage(Object obj) {
-			return null;//PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_OBJ_ELEMENT);
-		}
-	}
-	class NameSorter extends ViewerSorter {
-	}
-
+	private NullProgressMonitor progress;
+    
 	/**
 	 * The constructor.
 	 */
@@ -115,9 +79,9 @@ public class RTCListView extends ViewPart {
 		GridLayout layout = new GridLayout(1, false);
 		parent.setLayout(layout);
 		
-		Button button = new Button(parent, SWT.NONE);
-		button.setText("Load RTSystem Profile");
-		button.addSelectionListener(new SelectionListener() {
+		Button btnLoad = new Button(parent, SWT.NONE);
+		btnLoad.setText("Load RTSystem Profile");
+		btnLoad.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {}
 
 			public void widgetSelected(SelectionEvent e) {
@@ -125,18 +89,18 @@ public class RTCListView extends ViewPart {
 				fdlg.setFilterExtensions( new String[] {"*.xml"} );
 				fdlg.open();
 				String fname = fdlg.getFileName();
-				profile = getRTSProfile(fname);
-				List<Object> ret = new ArrayList<Object>();
-				if ( profile != null ) {
-					List<Component> comps = profile.getComponent();
-					for (int i=0; i<comps.size(); i++) {
-						ret.add("test");//new Object[]{(Object)comps.get(i).getInstanceName(), (Object)comps.get(i).getCompositeType()});
+				if ( fname != null && fname != "" ) {
+					profile = getRTSProfile(fname);
+					viewer.refresh();
+					try {
+						createProjectDir(fname.replace(".xml", ""));
+					} catch (CoreException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
 					}
 				}
-				viewer.setInput(new Object[] {});
-				viewer.refresh();
 			}
-		});
+		});		
 		
 		viewer = new TableViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL | SWT.FULL_SELECTION);
 		viewer.setContentProvider(new ViewContentProvider());
@@ -174,14 +138,30 @@ public class RTCListView extends ViewPart {
 		contributeToActionBars();
 	}
 	
-	/*private ColumnLayoutData[] getColumnLayouts() {
-		ColumnPixelData[] result = new ColumnPixelData[DEFAULT_COLUMN_LAYOUTS.length];
-		for (int i = 0; i < DEFAULT_COLUMN_LAYOUTS.length; i++) {
-			int width = DEFAULT_COLUMN_LAYOUTS[i].width;
-			result[i] = new ColumnPixelData(width);
+	public void createProjectDir(String projectName) throws CoreException {
+		IWorkspaceRoot root = ResourcesPlugin.getWorkspace().getRoot();
+		IProject project = root.getProject(projectName);
+		if ( !project.exists() ) {
+			project.create(progress);
+			project.open(progress);
 		}
-		return result;
-	}*/
+		
+		IFolder folderScripts = project.getFolder("scripts");
+		if ( !folderScripts.exists() ) {
+			folderScripts.create(true, true, progress);
+		}
+		
+		IFolder folderIdls = project.getFolder("idls");
+		if ( !folderIdls.exists() ) {
+			folderIdls.create(true, true, progress);
+		}
+
+		IFile file = project.getFile("scripts/rtc.conf");
+		if ( !file.exists() ) {
+			file.create(new ByteArrayInputStream(new byte[0]), true, progress);
+		}
+	}
+	
 	private void hookContextMenu() {
 		MenuManager menuMgr = new MenuManager("#PopupMenu");
 		menuMgr.setRemoveAllWhenShown(true);
@@ -270,15 +250,79 @@ public class RTCListView extends ViewPart {
 	}
 	
     public RtsProfile getRTSProfile(String fname) {
-        try {
-			rtsProfileOperator.loadProfile(fname);
-	        return rtsProfileOperator.getRtsProfile();
-		} catch (ProfileValidateException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+    	if ( fname != null)  {
+            try {
+    			rtsProfileOperator.loadProfile(fname);
+    	        return rtsProfileOperator.getRtsProfile();
+    		} catch (ProfileValidateException e) {
+    			// TODO Auto-generated catch block
+    			e.printStackTrace();
+    		} catch (Exception e) {
+    			e.printStackTrace();
+    		}
+    	}
 		return null;
+    }
+    
+	/*
+	 * The content provider class is responsible for
+	 * providing objects to the view. It can wrap
+	 * existing objects in adapters or simply return
+	 * objects as-is. These objects may be sensitive
+	 * to the current input of the view, or ignore
+	 * it and always show the same content 
+	 * (like Task List, for example).
+	 */
+	 
+	class ViewContentProvider implements IStructuredContentProvider {
+		public void inputChanged(Viewer v, Object oldInput, Object newInput) {
+		}
+		public void dispose() {
+		}
+		public Object[] getElements(Object parent) {
+			if ( profile != null) {
+				return profile.getComponent().toArray();
+			}
+			return new Object[]{};
+		}
+	}
+	
+	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider {
+		public String getColumnText(Object obj, int index) {
+			Component comp = (Component)obj;
+			switch(index) {
+			case 0:
+				return comp.getInstanceName();
+			case 1:
+				return comp.getCompositeType();
+			case 2:
+				return comp.getPathUri();
+			case 3:
+				return comp.getId();
+			default:
+				break;
+			}
+			return getText(obj);
+		}
+		public Image getColumnImage(Object obj, int index) {
+			return getImage(obj);
+		}
+		public Image getImage(Object obj) {
+			return null;//PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_OBJ_ELEMENT);
+		}
+	}
+	class NameSorter extends ViewerSorter {
+	}
+    
+    public class SynchronizeListExportWithProgress implements IRunnableWithProgress {
+        public void run(IProgressMonitor monitor) throws InvocationTargetException,
+                InterruptedException {
+
+            monitor.beginTask("処理中...", IProgressMonitor.UNKNOWN);
+            
+            Thread.sleep(1000);
+            
+            monitor.done();
+        }
     }
 }
