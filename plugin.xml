@@ -14,12 +14,6 @@
             id="com.generalrobotix.ui.realtimesystem_configurator.category"
             name="Realtime System Configurator"/>
       <view
-            allowMultiple="false"
-            category="Realtime System Configurator"
-            class="com.generalrobotix.ui.realtimesystem_configurator.execution_context_view"
-            id="com.generalrobotix.ui.realtimesystem_configurator.execution_context_view"
-            name="Execution Contexts"/>
-      <view
             category="Realtime System Configurator"
             class="com.generalrobotix.ui.realtimesystem_configurator.RTCListView"
             id="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"
@@ -28,7 +22,15 @@
             category="Realtime System Configurator"
             class="com.generalrobotix.ui.realtimesystem_configurator.TimingChartView"
             id="com.generalrobotix.ui.realtimesystem_configurator.timingchartview"
-            name="TimingChart"/>
+            name="Timing Chart"/>
+      <view
+            class="com.generalrobotix.ui.realtimesystem_configurator.RTSystemToplogyView"
+            id="com.generalrobotix.ui.realtimesystem_configurator.toplogyview"
+            name="RTSysytem Topology"/>
+      <view
+            class="com.generalrobotix.ui.realtimesystem_configurator.BenchTestOperatorView"
+            id="com.generalrobotix.ui.realtimesystem_configurator.benchtestoperator"
+            name="BenchTest Operator"/>
    </extension>
    <extension
          point="org.eclipse.ui.perspectiveExtensions">
