@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.2"?>
+<plugin>
+   <extension
+         point="org.eclipse.ui.perspectives">
+      <perspective
+            class="com.generalrobotix.ui.realtimesystem_configurator.PerspectiveFactory"
+            id="com.generalrobotix.ui.realtimesystem_configurator.perspective"
+            name="Realtime System Configurator"/>
+   </extension>
+   <extension
+         point="org.eclipse.ui.views">
+      <category
+            id="com.generalrobotix.ui.realtimesystem_configurator.category"
+            name="Realtime System Configurator"/>
+      <view
+            allowMultiple="false"
+            category="Realtime System Configurator"
+            class="com.generalrobotix.ui.realtimesystem_configurator.execution_context_view"
+            id="com.generalrobotix.ui.realtimesystem_configurator.execution_context_view"
+            name="Execution Contexts"/>
+      <view
+            category="Realtime System Configurator"
+            class="com.generalrobotix.ui.realtimesystem_configurator.RTCListView"
+            id="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"
+            name="RTC List"/>
+      <view
+            category="Realtime System Configurator"
+            class="com.generalrobotix.ui.realtimesystem_configurator.TimingChartView"
+            id="com.generalrobotix.ui.realtimesystem_configurator.timingchartview"
+            name="TimingChart"/>
+   </extension>
+   <extension
+         point="org.eclipse.ui.perspectiveExtensions">
+      <perspectiveExtension targetID="com.generalrobotix.ui.realtimesystem_configurator.perspective">
+         <view
+               id="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"
+               ratio="0.5"
+               relationship="right"
+               relative="org.eclipse.ui.view.editors"/>
+         <view
+               id="org.eclipse.ui."
+               relationship="stack"/>
+      </perspectiveExtension>
+   </extension>
+
+</plugin>
