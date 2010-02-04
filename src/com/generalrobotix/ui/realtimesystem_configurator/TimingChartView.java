@@ -53,7 +53,7 @@ public class TimingChartView extends ViewPart {
 
         final XYDataset data = createStepXYDataset();
 
-        final JFreeChart chart = ChartFactory.createXYStepChart(
+        final JFreeChart chart = ChartFactory.createXYStepAreaChart(
             title,
             xAxisLabel, yAxisLabel,
             data,
