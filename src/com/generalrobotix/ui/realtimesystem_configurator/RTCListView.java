@@ -87,6 +87,8 @@ public class RTCListView extends ViewPart {
 			public void widgetSelected(SelectionEvent e) {
 				FileDialog fdlg = new FileDialog(((Button)e.getSource()).getShell(), SWT.OPEN);
 				fdlg.setFilterExtensions( new String[] {"*.xml"} );
+				
+				
 				fdlg.open();
 				String fname = fdlg.getFileName();
 				if ( fname != null && fname != "" ) {
