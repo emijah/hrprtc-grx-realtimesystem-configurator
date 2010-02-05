@@ -34,28 +34,24 @@
    </extension>
    <extension
          point="org.eclipse.ui.perspectiveExtensions">
-      <perspectiveExtension targetID="com.generalrobotix.ui.realtimesystem_configurator.perspective">
-         <view
-               id="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"
-               ratio="0.5"
-               relationship="right"
-               relative="org.eclipse.ui.view.editors"/>
-         <view
-               id="org.eclipse.ui.view.PropertySheet"
-               relationship="stack"
-               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
+      <perspectiveExtension targetID="com.generalrobotix.ui.realtimesystem_configurator.perspectiv">
          <view
                id="org.eclipse.ui.console.ConsoleView"
+               ratio="0.2"
                relationship="stack"
-               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
+               relative="org.eclipse.jdt.ui.PackageExplorer"/>
          <view
-               id="jp.go.aist.rtm.repositoryView.view"
-               relationship="stack"
-               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
+               id="org.eclipse.jdt.ui.PackageExplorer"
+               relationship="left"
+               relative="org.eclipse.jdt.ui.PackageExplorer"/>
          <view
-               id="jp.go.aist.rtm.nameserviceview.ui.views.nameserviceview.NameServiceView"
-               relationship="stack"
-               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
+               id="org.eclipse.ui.views.PropertySheet"
+               relationship="right"
+               relative="org.eclipse.jdt.ui.PackageExplorer"/>
+         <view
+               id="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"
+               relationship="left"
+               relative="org.eclipse.ui.view.editors"/>
          <view
                id="com.generalrobotix.ui.realtimesystem_configurator.topologyview"
                relationship="stack"
