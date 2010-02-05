@@ -106,6 +106,7 @@ public class RTCListView extends ViewPart {
 		viewer.setContentProvider(new ViewContentProvider());
 		viewer.setLabelProvider(new ViewLabelProvider());
 		viewer.setInput(new Object[]{});
+		
 		Table table = viewer.getTable();
 		GridData tableLayoutData = new GridData(GridData.FILL_BOTH);
 		table.setLayoutData(tableLayoutData);
@@ -255,7 +256,6 @@ public class RTCListView extends ViewPart {
     			rtsProfileOperator.loadProfile(fname);
     	        return rtsProfileOperator.getRtsProfile();
     		} catch (ProfileValidateException e) {
-    			// TODO Auto-generated catch block
     			e.printStackTrace();
     		} catch (Exception e) {
     			e.printStackTrace();
@@ -313,16 +313,4 @@ public class RTCListView extends ViewPart {
 	}
 	class NameSorter extends ViewerSorter {
 	}
-    
-    public class SynchronizeListExportWithProgress implements IRunnableWithProgress {
-        public void run(IProgressMonitor monitor) throws InvocationTargetException,
-                InterruptedException {
-
-            monitor.beginTask("処理中...", IProgressMonitor.UNKNOWN);
-            
-            Thread.sleep(1000);
-            
-            monitor.done();
-        }
-    }
 }
