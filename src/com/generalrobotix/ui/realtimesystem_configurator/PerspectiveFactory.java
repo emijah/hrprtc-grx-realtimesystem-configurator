@@ -23,7 +23,7 @@ public class PerspectiveFactory implements IPerspectiveFactory {
 	     IFolderLayout rightTop = layout.createFolder("rightTop_folder", IPageLayout.RIGHT, (float) 0.7f, editorArea);
 	     rightTop.addView(IPageLayout.ID_PROP_SHEET);
 	     IFolderLayout rightBottom = layout.createFolder("rightBottom_folder", IPageLayout.BOTTOM, (float) 0.5f, IPageLayout.ID_PROP_SHEET);
-	     rightBottom.addView("com.generalrobotix.ui.realtimesystem_configurator.benchtestoperator");
+	     rightBottom.addView("com.generalrobotix.ui.realtimesystem_configurator.benchmarkoperator");
 
 	     
 	     // エディタの下側に・ビューを生成
