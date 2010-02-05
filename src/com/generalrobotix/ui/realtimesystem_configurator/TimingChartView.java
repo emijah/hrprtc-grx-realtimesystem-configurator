@@ -12,6 +12,8 @@ import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.ValueAxis;
+
+import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.data.category.DefaultIntervalCategoryDataset;
@@ -63,18 +65,22 @@ public class TimingChartView extends ViewPart {
             false   // urls
         );
 
-        // then customise it a little...
-        chart.setBackgroundPaint(new Color(216, 216, 216));
-        final XYPlot plot = chart.getXYPlot();
-        plot.getRenderer().setSeriesStroke(0, new BasicStroke(2.0f));
-        plot.getRenderer().setSeriesStroke(1, new BasicStroke(2.0f));
+		// then customise it a little...
+		chart.setBackgroundPaint(Color.white);						// 図の背景色設定
+		
+		XYPlot plot = (XYPlot)chart.getPlot();						// 描画領域のオブジェクト取得
+        plot.setBackgroundPaint(Color.white);						// 描画領域の色設定
+		plot.setDomainGridlinePaint(Color.black);					// x軸方向の目盛線の色設定
+		plot.setRangeGridlinePaint(Color.black);					// y軸方向の目盛線の色設定
         
-        //NumberAxis xAxis = (NumberAxis) plot.getDomainAxis();
-        //xAxis.set
         return chart;
 	}
 	
     public static XYDataset createStepXYDataset() {
+    	
+        //final CategoryPlot plotArea = chart.getCategoryPlot();
+        //plotArea.setBackgroundPaint(null);
+
     	TimeSeries s1 = new TimeSeries("Plan 1", FixedMillisecond.class);
  
         s1.add(new FixedMillisecond(0), 0);
@@ -97,7 +103,7 @@ public class TimingChartView extends ViewPart {
         
         final TimeSeriesCollection dataset = new TimeSeriesCollection();
         dataset.addSeries(s1);
-        dataset.addSeries(s2);
+        //dataset.addSeries(s2);
         return dataset;
     }
     
