@@ -12,5 +12,6 @@
 	<classpathentry kind="lib" path="libs/jcommon-1.0.16.jar"/>
 	<classpathentry kind="lib" path="libs/jfreechart-1.0.13.jar"/>
 	<classpathentry kind="lib" path="libs/jfreechart-1.0.13-swt.jar"/>
+	<classpathentry kind="lib" path="libs/BenchmarkService.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

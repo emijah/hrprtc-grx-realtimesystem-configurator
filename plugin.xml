@@ -28,43 +28,21 @@
             id="com.generalrobotix.ui.realtimesystem_configurator.topologyview"
             name="RTSysytem Topology"/>
       <view
-            class="com.generalrobotix.ui.realtimesystem_configurator.BenchTestOperatorView"
-            id="com.generalrobotix.ui.realtimesystem_configurator.benchtestoperator"
-            name="BenchTest Operator"/>
+            class="com.generalrobotix.ui.realtimesystem_configurator.BenchmarkOperatorView"
+            id="com.generalrobotix.ui.realtimesystem_configurator.benchmarkoperator"
+            name="Benchmark Operator"/>
+      <view
+            class="com.generalrobotix.ui.realtimesystem_configurator.ViewPart1"
+            id="com.generalrobotix.ui.realtimesystem_configurator.view1"
+            name="TestView"/>
+   </extension> <extension
+         point="org.eclipse.ui.editors">
+      <editor
+            default="false"
+            id="jp.go.aist.rtm.systemeditor.editpartfactory"
+            name="RTSystem Editor"/>
    </extension>
-   <extension
-         point="org.eclipse.ui.perspectiveExtensions">
-      <perspectiveExtension targetID="com.generalrobotix.ui.realtimesystem_configurator.perspectiv">
-         <view
-               id="org.eclipse.ui.console.ConsoleView"
-               ratio="0.2"
-               relationship="stack"
-               relative="org.eclipse.jdt.ui.PackageExplorer"/>
-         <view
-               id="org.eclipse.jdt.ui.PackageExplorer"
-               relationship="left"
-               relative="org.eclipse.jdt.ui.PackageExplorer"/>
-         <view
-               id="org.eclipse.ui.views.PropertySheet"
-               relationship="right"
-               relative="org.eclipse.jdt.ui.PackageExplorer"/>
-         <view
-               id="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"
-               relationship="left"
-               relative="org.eclipse.ui.view.editors"/>
-         <view
-               id="com.generalrobotix.ui.realtimesystem_configurator.topologyview"
-               relationship="stack"
-               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
-         <view
-               id="com.generalrobotix.ui.realtimesystem_configurator.benchtestoperator"
-               relationship="stack"
-               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
-         <view
-               id="com.generalrobotix.ui.realtimesystem_configurator.timingchartview"
-               relationship="stack"
-               relative="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"/>
-      </perspectiveExtension>
-   </extension>
+   
+   
 
 </plugin>
