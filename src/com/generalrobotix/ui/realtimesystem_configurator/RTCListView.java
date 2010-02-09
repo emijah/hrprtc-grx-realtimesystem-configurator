@@ -9,10 +9,10 @@ import org.eclipse.core.resources.IWorkspaceRoot;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.jface.viewers.IStructuredContentProvider;
 import org.eclipse.jface.viewers.ITableLabelProvider;
+import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.jface.viewers.TableViewer;
+import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.jface.viewers.ViewerSorter;
 import org.eclipse.swt.SWT;
@@ -24,20 +24,16 @@ import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.FileDialog;
-import org.eclipse.swt.widgets.Table;
-import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.Tree;
+import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.part.ViewPart;
-import org.openrtp.repository.ProfileValidateException;
-import org.openrtp.repository.RTSystemProfileOperator;
 import org.openrtp.repository.xsd.rtsystem.Component;
-import org.openrtp.repository.xsd.rtsystem.RtsProfile;
+
+import com.generalrobotix.model.RTCModel;
 
 public class RTCListView extends ViewPart {
-	private TableViewer viewer;
-
-    public RTSystemProfileOperator rtsProfileOperator = new RTSystemProfileOperator();
-    private RtsProfile profile; 
-    
+	private TreeViewer viewer;
 	private NullProgressMonitor progress;
     
 	/**
@@ -55,58 +51,62 @@ public class RTCListView extends ViewPart {
 		parent.setLayout(layout);
 		
 		Button btnLoad = new Button(parent, SWT.NONE);
-		btnLoad.setText("Load RTSystem Profile");
+		btnLoad.setText("Load RTSystem");
 		btnLoad.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {}
 
 			public void widgetSelected(SelectionEvent e) {
 				FileDialog fdlg = new FileDialog(((Button)e.getSource()).getShell(), SWT.OPEN);
 				fdlg.setFilterExtensions( new String[] {"*.xml"} );
-				
-				
 				fdlg.open();
 				String fname = fdlg.getFileName();
 				if ( fname != null && fname != "" ) {
-					profile = getRTSProfile(fdlg.getFilterPath()+java.io.File.separator+fname);
-					viewer.refresh();
 					try {
+						RTCModel model = new RTCModel(fdlg.getFilterPath() + java.io.File.separator + fname);
+						viewer.setInput(model);
+						viewer.refresh();
 						createProjectDir(fname.replace(".xml", ""));
 					} catch (CoreException e1) {
-						// TODO Auto-generated catch block
 						e1.printStackTrace();
+					} catch (Exception e2) {
+						e2.printStackTrace();
 					}
 				}
 			}
 		});		
 		
-		viewer = new TableViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL | SWT.FULL_SELECTION);
+		viewer = new TreeViewer(parent, SWT.MULTI | SWT.H_SCROLL | SWT.V_SCROLL | SWT.FULL_SELECTION);
 		viewer.setContentProvider(new ViewContentProvider());
 		viewer.setLabelProvider(new ViewLabelProvider());
-		viewer.setInput(new Object[]{});
+		//viewer.setInput(new Object[]{});
 		
-		Table table = viewer.getTable();
+		Tree tree = viewer.getTree();
+		TreeItem root = new TreeItem(tree, SWT.NONE);
+		root.setText("test");
+		tree.setTopItem(root);
+		System.out.println("test:"+tree.getTopItem());
 		GridData tableLayoutData = new GridData(GridData.FILL_BOTH);
-		table.setLayoutData(tableLayoutData);
-		table.setHeaderVisible(true);
-		table.setLinesVisible(true);
+		tree.setLayoutData(tableLayoutData);
+		tree.setHeaderVisible(true);
+		tree.setLinesVisible(true);
 		
-		TableColumn column = new TableColumn(table, SWT.LEFT, 0);
+		TreeColumn column = new TreeColumn(tree, SWT.LEFT, 0);
 		column.setText("RTC Instance");
 		column.setWidth(200);
 		
-		column = new TableColumn(table, SWT.LEFT, 1);
+		column = new TreeColumn(tree, SWT.LEFT, 1);
 		column.setText("EC ID");
 		column.setWidth(150);
 		
-		column = new TableColumn(table, SWT.LEFT, 2);
+		column = new TreeColumn(tree, SWT.LEFT, 2);
 		column.setText("RealTime");
 		column.setWidth(100);
 		
-		column = new TableColumn(table, SWT.LEFT, 3);
+		column = new TreeColumn(tree, SWT.LEFT, 3);
 		column.setText("test1");
 		column.setWidth(100);
 		
-		column = new TableColumn(table, SWT.LEFT, 4);
+		column = new TreeColumn(tree, SWT.LEFT, 4);
 		column.setText("test2");
 		column.setWidth(100);
 	}
@@ -141,50 +141,57 @@ public class RTCListView extends ViewPart {
 	public void setFocus() {
 		viewer.getControl().setFocus();
 	}
-	
-    public RtsProfile getRTSProfile(String fname) {
-    	if ( fname != null)  {
-            try {
-    			rtsProfileOperator.loadProfile(fname);
-    	        return rtsProfileOperator.getRtsProfile();
-    		} catch (ProfileValidateException e) {
-    			e.printStackTrace();
-    		} catch (Exception e) {
-    			e.printStackTrace();
-    		}
-    	}
-		return null;
-    }
      
-	class ViewContentProvider implements IStructuredContentProvider {
+	class ViewContentProvider implements ITreeContentProvider {
+
 		public void inputChanged(Viewer v, Object oldInput, Object newInput) {
 		}
+		
 		public void dispose() {
 		}
+		
 		public Object[] getElements(Object parent) {
-			if ( profile != null) {
-				return profile.getComponent().toArray();
+			return getChildren(parent);
+		}
+		
+		public Object[] getChildren(Object parentElement) {
+			if ( parentElement instanceof RTCModel ) {
+				return ((RTCModel)parentElement).getChildren().toArray();
 			}
-			return new Object[]{};
+			return null;
+		}
+		
+		public Object getParent(Object element) {
+			return ((RTCModel)element).getParent();
+		}
+		
+		public boolean hasChildren(Object element) {
+			return (((RTCModel)element).getChildren().size() > 0);
 		}
 	}
 	
 	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider {
 		public String getColumnText(Object obj, int index) {
-			Component comp = (Component)obj;
-			switch(index) {
-			case 0:
-				return comp.getInstanceName();
-			case 1:
-				return comp.getCompositeType();
-			case 2:
-				return comp.getPathUri();
-			case 3:
-				return comp.getId();
-			default:
-				break;
+			try {				
+				Component comp = ((RTCModel)obj).getComponent();
+				if (comp == null) 
+					return "";
+				switch(index) {
+				case 0:
+					return comp.getInstanceName();
+				case 1:
+					return comp.getCompositeType();
+				case 2:
+					return comp.getPathUri();
+				case 3:
+					return comp.getId();
+				default:
+					break;
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			return getText(obj);
+			return "";//getText(obj);
 		}
 		public Image getColumnImage(Object obj, int index) {
 			return getImage(obj);
