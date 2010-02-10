@@ -1,11 +1,10 @@
 package com.generalrobotix.model;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
-import org.eclipse.swt.SWT;
-import org.eclipse.swt.widgets.TreeItem;
 import org.openrtp.repository.ProfileValidateException;
 import org.openrtp.repository.RTSystemProfileOperator;
 import org.openrtp.repository.xsd.rtsystem.Component;
@@ -20,6 +19,7 @@ public class RTCModel {
 	
 	private RtsProfile profile;
 	private Component component;
+	private BenchmarkResultModel result;
 	
     public static RTSystemProfileOperator rtsProfileOperator = new RTSystemProfileOperator();
 	
@@ -29,6 +29,7 @@ public class RTCModel {
 	}
 	
     private RTCModel(RTCModel top, Component comp) {
+    	this.top = top;
     	this.component = comp;
     	this.nodeName = comp.getInstanceName();
     }
@@ -54,12 +55,24 @@ public class RTCModel {
 		return nodeName;
 	}
 	
+	public BenchmarkResultModel getResult() {
+		return result;
+	}
+	
+	public void setResult(BenchmarkResultModel result) {
+		this.result = result;
+	}
+	
 	public void add(RTCModel model) {
 		children.add(model);
 		if ( model.parent != null ) {
 			model.parent.children.remove(model);
 		}
 		model.parent = this;
+	}
+	
+	public RTCModel getTop() {
+		return top;
 	}
 	
 	public RTCModel getParent() {
