@@ -29,7 +29,7 @@ import org.eclipse.swt.widgets.TreeItem;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
-import org.openrtp.repository.xsd.rtsystem.Component;
+import org.openrtp.namespaces.rts.version02.Component;
 
 import com.generalrobotix.model.RTCModel;
 

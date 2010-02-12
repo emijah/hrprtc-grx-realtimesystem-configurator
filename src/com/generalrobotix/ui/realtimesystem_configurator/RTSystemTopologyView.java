@@ -20,35 +20,33 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
-import org.openrtp.repository.xsd.rtsystem.Component;
-import org.openrtp.repository.xsd.rtsystem.Dataport;
-import org.openrtp.repository.xsd.rtsystem.DataportConnector;
-import org.openrtp.repository.xsd.rtsystem.TargetPort;
+import org.openrtp.namespaces.rts.version02.DataportConnector;
+import org.openrtp.namespaces.rts.version02.TargetPort;
 
 import com.generalrobotix.model.RTCModel;
 
-import edu.uci.ics.jung.algorithms.layout.TreeLayout;
-import edu.uci.ics.jung.graph.DelegateForest;
-import edu.uci.ics.jung.graph.Forest;
+import edu.uci.ics.jung.algorithms.layout.FRLayout;
+import edu.uci.ics.jung.graph.DirectedOrderedSparseMultigraph;
+import edu.uci.ics.jung.graph.Graph;
 import edu.uci.ics.jung.visualization.control.CrossoverScalingControl;
 import edu.uci.ics.jung.visualization.control.DefaultModalGraphMouse;
 import edu.uci.ics.jung.visualization.control.ModalGraphMouse;
 import edu.uci.ics.jung.visualization.control.ScalingControl;
-import edu.uci.ics.jung.visualization.decorators.EdgeShape;
 import edu.uci.ics.jung.visualization.decorators.ToStringLabeller;
 import edu.uci.ics.jung.visualization.swt.GraphZoomScrollPane;
 import edu.uci.ics.jung.visualization.swt.VisualizationComposite;
 
 public class RTSystemTopologyView extends ViewPart {
-	Forest<String, Integer> graph;
+	Graph<RTCModel, Integer> graph;
 
-	VisualizationComposite<String, Integer> vv;
+	VisualizationComposite<RTCModel, Integer> vv;
 
 	public RTSystemTopologyView() {
 	}
 
 	@Override
 	public void createPartControl(Composite parent) {
+		
 		getSite().getPage().addSelectionListener(new ISelectionListener() {
 			public void selectionChanged(IWorkbenchPart sourcepart,
 					ISelection selection) {
@@ -65,13 +63,14 @@ public class RTSystemTopologyView extends ViewPart {
 
 		parent.setLayout(new GridLayout());
 
-		graph = new DelegateForest<String, Integer>();
+		graph = new DirectedOrderedSparseMultigraph<RTCModel, Integer>();
+		//graph = Graphs.<RTCModel, Integer>synchronizedDirectedGraph(new DirectedSparseMultigraph<RTCModel, Integer>());
 
-		TreeLayout layout = new TreeLayout<String, Integer>(graph);
+		FRLayout layout = new FRLayout<RTCModel, Integer>(graph);
 		layout.setSize(new Dimension(900, 900));
 
-		final GraphZoomScrollPane<String, Integer> panel = new GraphZoomScrollPane<String, Integer>(
-				parent, SWT.NONE, layout, new Dimension(600, 600));
+		final GraphZoomScrollPane<RTCModel, Integer> panel = 
+				new GraphZoomScrollPane<RTCModel, Integer>(parent, SWT.NONE, layout, new Dimension(600, 600));
 		GridData gridData = new GridData();
 		gridData.grabExcessHorizontalSpace = true;
 		gridData.grabExcessVerticalSpace = true;
@@ -81,15 +80,12 @@ public class RTSystemTopologyView extends ViewPart {
 
 		vv = panel.vv;
 		vv.setBackground(Color.white);
-		vv.getRenderContext().setEdgeShapeTransformer(
-				new EdgeShape.Line<String, Integer>());
-		vv.getRenderContext().setVertexLabelTransformer(
-				new ToStringLabeller<String>());
+		//vv.getRenderContext().setEdgeShapeTransformer(new EdgeShape.Line<RTCModel, Integer>());
+		vv.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<RTCModel>());
 
 		// add a listener for ToolTips
-		vv.setVertexToolTipTransformer(new ToStringLabeller<String>());
-		vv.getRenderContext().setArrowFillPaintTransformer(
-				new ConstantTransformer(Color.lightGray));
+		vv.setVertexToolTipTransformer(new ToStringLabeller<RTCModel>());
+		vv.getRenderContext().setArrowFillPaintTransformer(new ConstantTransformer(Color.lightGray));
 
 		GridData gd = new GridData();
 		gd.grabExcessHorizontalSpace = true;
@@ -167,35 +163,25 @@ public class RTSystemTopologyView extends ViewPart {
 	int count = 0;
 
 	private void updateStructure(RTCModel model) {
-		Iterator<RTCModel> it = model.getChildren().iterator();
+		Iterator<RTCModel> it = model.iterator();
 		while (it.hasNext()) {
 			RTCModel m = it.next();
-			graph.addVertex(m.getName());
-			Component c = m.getComponent();
-			Iterator<Dataport> ports = c.getDataPorts().iterator();
-			while (ports.hasNext()) {
-				Dataport port = ports.next();
-				Iterator<DataportConnector> cons = port.getDataPortConnectors().iterator();
-				while(cons.hasNext()) {
-					DataportConnector con = cons.next();
-					TargetPort tport = con.getTargetDataPort();
-					String id = tport.getComponentId();
-					String name = tport.getInstanceName();
-					RTCModel target = model.getTop().find(id, name);
-					if ( target != null ) {
-						graph.addVertex(target.getName());
-						graph.addEdge(count++, m.getName(), target.getName());
-					}
-				}
+			if ( m.getChildren().size()==0 ){
+				graph.addVertex(m);
+			}	
+		}
+		
+		Iterator<org.openrtp.namespaces.rts.version02.DataportConnector> it2 = model.getDataPortConnectors().iterator();
+		while (it2.hasNext()) {
+			DataportConnector con = it2.next();
+			TargetPort source = con.getSourceDataPort();
+			TargetPort target = con.getTargetDataPort();
+			RTCModel smodel = model.getTop().find(source.getComponentId(), source.getInstanceName());
+			RTCModel tmodel = model.getTop().find(target.getComponentId(), target.getInstanceName());
+			if ( smodel != null && tmodel != null ) {
+				graph.addEdge(count++, smodel, tmodel);
 			}
 		}
-		/*
-		 * Iterator<RTCModel> it2 = model.getTop().getChildren().iterator();
-		 * while (it2.hasNext()) { RTCModel m = it2.next();
-		 * graph.addVertex(m.getName()); graph.getVertices(); }
-		 * graph.addVertex("A0"); graph.addEdge(0, "A0", "B0"); graph.addEdge(1,
-		 * "A0", "B1"); graph.addEdge(2, "A0", "B2");
-		 */
 	}
 
 	@Override

@@ -1,27 +1,30 @@
 package com.generalrobotix.model;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
-import org.openrtp.repository.ProfileValidateException;
-import org.openrtp.repository.RTSystemProfileOperator;
-import org.openrtp.repository.xsd.rtsystem.Component;
-import org.openrtp.repository.xsd.rtsystem.RtsProfile;
-import org.openrtp.repository.xsd.rtsystem.TargetComponent;
+import org.openrtp.namespaces.rts.version01.Participant;
+import org.openrtp.namespaces.rts.version02.Component;
+import org.openrtp.namespaces.rts.version02.DataportConnector;
+import org.openrtp.namespaces.rts.version02.Participants;
+import org.openrtp.namespaces.rts.version02.RtsProfileExt;
+import org.openrtp.namespaces.rts.version02.TargetComponent;
+
+import jp.go.aist.rtm.toolscommon.profiles.util.XmlHandler;
 
 public class RTCModel {
 	private String nodeName;
 	private RTCModel parent;
 	private RTCModel top;
 	private List<RTCModel> children = new ArrayList<RTCModel>();
+	private List<RTCModel> members = new ArrayList<RTCModel>();
 	
-	private RtsProfile profile;
 	private Component component;
 	private BenchmarkResultModel result;
+	private RtsProfileExt profile;
 	
-    public static RTSystemProfileOperator rtsProfileOperator = new RTSystemProfileOperator();
+    public static XmlHandler rtsProfileOperator = new XmlHandler();
 	
 	public RTCModel(String rtsProfilePath) {
 	   	this.top = this;
@@ -36,23 +39,32 @@ public class RTCModel {
 	
 	private void load(String fname) {
 	   	try {
-	   		rtsProfileOperator.loadProfile(fname);
-	   		profile = rtsProfileOperator.getRtsProfile();
-	   	} catch (ProfileValidateException e) {
-	   		e.printStackTrace();
-	   	}
-	   	
+			profile = rtsProfileOperator.loadXmlRts(fname);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
     	nodeName = fname;
  
-		Iterator<Component> it = profile.getComponent().iterator();
+    	members.clear();
+		Iterator<Component> it = profile.getComponents().iterator();
 		while ( it.hasNext() ) {
-			this.add(new RTCModel(this, it.next()));
+			RTCModel model = new RTCModel(this, it.next());
+			this.add(model);
+			members.add(model);
 		}
 		this.updateStructure();
 	}
 	
 	public String getName() {
 		return nodeName;
+	}
+	
+	public String toString() {
+		return getName();
+	}
+	
+	public List<DataportConnector> getDataPortConnectors() {
+		return getTop().profile.getDataPortConnectors();
 	}
 	
 	public BenchmarkResultModel getResult() {
@@ -87,6 +99,10 @@ public class RTCModel {
 		return component;
 	}
 	
+	public Iterator<RTCModel> iterator() {
+		return getTop().members.iterator();
+	}
+	
 	public RTCModel find(String id, String instanceName) {
 		if ( component != null && component.getId().equals(id) && component.getInstanceName().equals(instanceName) ) {
 			return this;
@@ -110,13 +126,13 @@ public class RTCModel {
 			RTCModel model = children.get(i);
 			Component comp = model.component;
 	 		if ( comp.getCompositeType().equals("PeriodicECShared") || comp.getCompositeType().equals("PeriodicStateShared")) {
-	 			Iterator<TargetComponent> it2 = comp.getParticipants().getParticipant().iterator();
+	 			Iterator<Participants> it2 = comp.getParticipants().iterator();
 	 			while ( it2.hasNext() ) {
-	 				TargetComponent tcomp = it2.next();
-	 				RTCModel result = top.find(tcomp.getComponentId(), tcomp.getInstanceName());
-	 				if ( result != null && !model.children.contains(result)) {
-	 					model.add(result);
-	 				}
+	 				TargetComponent tcomp = it2.next().getParticipant();
+		 			RTCModel result = top.find(tcomp.getComponentId(), tcomp.getInstanceName());
+		 			if ( result != null && !model.children.contains(result)) {
+		 				model.add(result);
+		 			}
 	 			}
 	 		}
 		}
