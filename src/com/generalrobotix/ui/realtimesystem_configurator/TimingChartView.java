@@ -18,46 +18,53 @@ import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.plot.CombinedDomainXYPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.chart.title.LegendTitle;
 import org.jfree.data.time.FixedMillisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.experimental.chart.swt.ChartComposite;
+import org.jfree.ui.RectangleEdge;
 
 import com.generalrobotix.model.RTCModel;
 
 public class TimingChartView extends ViewPart {
-	private String RtcName1="rtc1", RtcName2;
-	private ChartComposite chartComp1, chartComp2;
-	
 
+	String RtcName1;
+	String RtcName2;
+	List<RTCModel> children;
+	ChartComposite chartComp1, chartComp2;
+	
 	public TimingChartView() {
 	}
 
 	@Override
 	public void createPartControl(final Composite parent) {
+
 		getSite().getPage().addSelectionListener(new ISelectionListener() {
 			
 			public void selectionChanged(IWorkbenchPart part, ISelection selection) {
+				String RtcName1 = null;
+				String RtcName2 = null;
 				// TODO 自動生成されたメソッド・スタブ
 				if (part != TimingChartView.this &&
 						selection instanceof IStructuredSelection) {
 					List ret = ((IStructuredSelection) selection).toList();
 					if ( ret.get(0) instanceof RTCModel ) {
 						RTCModel mo = ((RTCModel)ret.get(0)).getTop();
-						List<RTCModel> children = mo.getChildren();
+						children = mo.getChildren();
 						RtcName1 = children.get(0).getName();
 						RtcName2 = children.get(1).getName();
-						System.out.println("Rtc1: "+RtcName1+ ", RTC2: "+RtcName2);
+						List<RTCModel> lists = children.get(1).getChildren();
+						for (int k=0; k<lists.size(); k++){
+							lists.get(k).getName();
+							System.out.println(".");
+						}
 					}
 				}
-				parent.getParent().redraw();
-				parent.getParent().update();
-				chartComp1.redraw();
-				chartComp2.redraw();
+				
 				chartComp1.getChart().setTitle(RtcName1);
 				chartComp2.getChart().setTitle(RtcName2);
-				
 			}
 			
 		});
@@ -65,15 +72,15 @@ public class TimingChartView extends ViewPart {
 		GridLayout gridlayout = new GridLayout(1, false);
 		GridData gdata = new GridData(GridData.FILL_BOTH);
 		parent.setLayout(gridlayout);
-		chartComp1 = new ChartComposite(parent, SWT.NONE, createCombinedChart(RtcName1), true);
-		chartComp2 = new ChartComposite(parent, SWT.NONE, createCombinedChart(RtcName2), true);
+		chartComp1 = new ChartComposite(parent, SWT.NONE, createCombinedChart("", children), true);
+		chartComp2 = new ChartComposite(parent, SWT.NONE, createCombinedChart("", children), true);
 		
 		chartComp1.setLayoutData(gdata);
 		chartComp2.setLayoutData(gdata);
 		parent.redraw();
 	}
 	
-	public static JFreeChart createCombinedChart(String title) {
+	public static JFreeChart createCombinedChart(String title, List<RTCModel> list) {
 		String xAxisLabel = "Time";
 		
 		NumberAxis domainAxis = new NumberAxis("Time");
@@ -86,9 +93,19 @@ public class TimingChartView extends ViewPart {
 		plot.setRangeGridlinePaint(Color.black);
 		
 		XYDataset data = null, data2 = null;
-		JFreeChart	subplot, subplot2, subplotXYStepArea;
+		JFreeChart	subplot, subplot2, subplotXYStepArea, subplotXYStepArea2;
 		
-		data = createStepXYDataset();
+		String[] strData =  {"test1", "test2"};
+		if (list!=null){
+			
+			int size = list.size();
+			for(int j=0; j<size; j++){
+				String[] strData2 = new String[size];
+				list.get(j);
+			}
+		}
+		
+		data = createStepXYDataset(strData);
 			
 		subplot = ChartFactory.createXYStepAreaChart(
 				title,
@@ -147,7 +164,7 @@ public class TimingChartView extends ViewPart {
 		subplotXY2.setDomainMinorGridlinePaint(Color.white);
 		subplotXY2.setDomainGridlinePaint(Color.black);
 		subplotXY2.setRangeGridlinePaint(Color.black);
-		JFreeChart subplotXYStepArea2 = ChartFactory.createXYStepAreaChart(
+		subplotXYStepArea2 = ChartFactory.createXYStepAreaChart(
 				title,
 				xAxisLabel, null,
 				(XYDataset)data2,
@@ -160,12 +177,15 @@ public class TimingChartView extends ViewPart {
 		plot.add(subplotXYStepArea.getXYPlot());
 		plot.add(subplotXYStepArea2.getXYPlot());
 		
+		LegendTitle legend = subplot.getLegend();
+		legend.setPosition(RectangleEdge.LEFT);
+
 		return subplot;
 	}
 	
-    public static XYDataset createStepXYDataset() {
+    public static XYDataset createStepXYDataset(String[] components) {
     	
-        TimeSeries s1 = new TimeSeries("Plan 1", FixedMillisecond.class);
+        TimeSeries s1 = new TimeSeries(components[0], FixedMillisecond.class);
         s1.add(new FixedMillisecond(0), 0);
         s1.add(new FixedMillisecond(1), 1);
         s1.add(new FixedMillisecond(2), 0);
@@ -174,7 +194,7 @@ public class TimingChartView extends ViewPart {
         s1.add(new FixedMillisecond(5), 0);
         s1.add(new FixedMillisecond(6), 0);
 
-    	TimeSeries s2 = new TimeSeries("Plan 2", FixedMillisecond.class);
+    	TimeSeries s2 = new TimeSeries(components[1], FixedMillisecond.class);
         s2.add(new FixedMillisecond(0), 0);
         s2.add(new FixedMillisecond(1), 0);
         s2.add(new FixedMillisecond(2), 1);
