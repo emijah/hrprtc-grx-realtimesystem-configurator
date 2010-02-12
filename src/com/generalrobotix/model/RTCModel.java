@@ -164,4 +164,8 @@ public class RTCModel {
 	 		}
 		}
 	}
+	
+	public String getHostName() {
+		return component.getPathUri().split("/")[0];
+	}
 }

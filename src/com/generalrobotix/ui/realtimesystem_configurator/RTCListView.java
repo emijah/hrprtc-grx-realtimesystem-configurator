@@ -157,21 +157,31 @@ public class RTCListView extends ViewPart {
 	
 	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider {
 		public String getColumnText(Object obj, int index) {
-			try {				
-				Component comp = ((RTCModel)obj).getComponent();
+			try {
+				RTCModel model = (RTCModel)obj;
+				Component comp = model.getComponent();
 				if (comp == null) 
 					return "";
 				switch(index) {
 				case 0:
-					return comp.getInstanceName();
+					return model.getName();
 				case 1:
 					return String.valueOf(comp.getExecutionContexts().get(0).getRate());
 				case 2:
-					return "0.0";
+					if (model.getResult() != null) {
+						return ""+model.getResult().max;
+					}
+					return "-";
 				case 3:
-					return "0.0";
+					if (model.getResult() != null) {
+						return ""+model.getResult().mean;
+					}
+					return "-";
 				case 4:
-					return "0.0";
+					if (model.getResult() != null) {
+						return ""+model.getResult().min;
+					}
+					return "-";
 				default:
 					break;
 				}
