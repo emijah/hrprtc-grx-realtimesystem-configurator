@@ -70,9 +70,6 @@ public class RTCListView extends ViewPart {
 
 		Tree tree = viewer.getTree();
 		TreeItem root = new TreeItem(tree, SWT.NONE);
-//		root.setText("test");
-//		tree.setTopItem(root);
-//		System.out.println("test:"+tree.getTopItem());
 		GridData tableLayoutData = new GridData(GridData.FILL_BOTH);
 		tree.setLayoutData(tableLayoutData);
 		tree.setHeaderVisible(true);

@@ -5,11 +5,15 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
+import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
@@ -46,7 +50,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	private String robotHost_ = "localhost";
 	private int robotPort_ = 2809;
 	private List<RTCModel> currentModels;
-	
+	private RTCModel selectedModel;
 	private TreeViewer resultViewer;
 	private Text text;
 
@@ -62,6 +66,11 @@ public class BenchmarkOperatorView extends ViewPart {
 		resultViewer.setContentProvider(new ViewContentProvider());
 		resultViewer.setLabelProvider(new ViewLabelProvider());
 		resultViewer.setInput(currentModels);
+		resultViewer.addSelectionChangedListener(new ISelectionChangedListener() {
+			public void selectionChanged(SelectionChangedEvent event) {
+				selectedModel = (RTCModel)((IStructuredSelection)event.getSelection()).toArray()[0];
+			}
+		});
 		getSite().setSelectionProvider(resultViewer);
 		
 		Tree tree = resultViewer.getTree();
@@ -121,9 +130,18 @@ public class BenchmarkOperatorView extends ViewPart {
 
 			public void widgetSelected(SelectionEvent e) {
 				try{
-					benchmarkTest("RobotHardware0");
-					benchmarkTest("SequencePlayer0");
-					benchmarkTest("StateHolder0");
+					if ( selectedModel != null) {
+						Iterator<RTCModel> it = selectedModel.getRTCMembers().iterator();
+						while ( it.hasNext() ) {
+							RTCModel model = it.next();
+							String compositeType = model.getComponent().getCompositeType();
+							if ( !compositeType.equals("PeriodicECShared") && !compositeType.equals("PeriodicStateShared") ) {
+								String pathUri = model.getComponent().getPathUri();
+								String hostName = pathUri.split("/")[0];
+								benchmarkTest(model.getComponent().getInstanceName(), hostName);
+							}
+						}
+					}
 				} catch (Exception ex) {
 					ex.printStackTrace();
 				}
@@ -131,8 +149,8 @@ public class BenchmarkOperatorView extends ViewPart {
 		});
 	}
 	
-	private void benchmarkTest(String rtcName) {
-		NamingContext rnc = GrxRTMUtil.getRootNamingContext(robotHost_, robotPort_);
+	private void benchmarkTest(String rtcName, String hostName) {
+		NamingContext rnc = GrxRTMUtil.getRootNamingContext(hostName, robotPort_);
 		RTObject rtc = GrxRTMUtil.findRTC(rtcName, rnc);
 		if ( rtc == null ) {
 			return;
