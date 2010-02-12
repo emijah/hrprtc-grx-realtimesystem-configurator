@@ -20,10 +20,11 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
-import org.openrtp.namespaces.rts.version02.DataportConnector;
-import org.openrtp.namespaces.rts.version02.TargetPort;
+//import org.openrtp.namespaces.rts.version02.DataportConnector;
+//import org.openrtp.namespaces.rts.version02.TargetPort;
 
 import com.generalrobotix.model.RTCModel;
+import com.generalrobotix.model.RTCModel.RTCConnection;
 
 import edu.uci.ics.jung.algorithms.layout.FRLayout;
 import edu.uci.ics.jung.graph.DirectedOrderedSparseMultigraph;
@@ -163,7 +164,7 @@ public class RTSystemTopologyView extends ViewPart {
 	int count = 0;
 
 	private void updateStructure(RTCModel model) {
-		Iterator<RTCModel> it = model.iterator();
+		Iterator<RTCModel> it = model.getRTCMembers().iterator();
 		while (it.hasNext()) {
 			RTCModel m = it.next();
 			if ( m.getChildren().size()==0 ){
@@ -171,16 +172,10 @@ public class RTSystemTopologyView extends ViewPart {
 			}	
 		}
 		
-		Iterator<org.openrtp.namespaces.rts.version02.DataportConnector> it2 = model.getDataPortConnectors().iterator();
-		while (it2.hasNext()) {
-			DataportConnector con = it2.next();
-			TargetPort source = con.getSourceDataPort();
-			TargetPort target = con.getTargetDataPort();
-			RTCModel smodel = model.getTop().find(source.getComponentId(), source.getInstanceName());
-			RTCModel tmodel = model.getTop().find(target.getComponentId(), target.getInstanceName());
-			if ( smodel != null && tmodel != null ) {
-				graph.addEdge(count++, smodel, tmodel);
-			}
+		Iterator<RTCConnection> it2 = model.getRTCConnections().iterator();
+		while( it2.hasNext() ) {
+			RTCConnection con = it2.next();
+			graph.addEdge(count++, con.source, con.target);
 		}
 	}
 
