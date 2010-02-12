@@ -4,24 +4,25 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.openrtp.namespaces.rts.version01.Participant;
+import jp.go.aist.rtm.toolscommon.profiles.util.XmlHandler;
+
 import org.openrtp.namespaces.rts.version02.Component;
 import org.openrtp.namespaces.rts.version02.DataportConnector;
 import org.openrtp.namespaces.rts.version02.Participants;
 import org.openrtp.namespaces.rts.version02.RtsProfileExt;
 import org.openrtp.namespaces.rts.version02.TargetComponent;
-
-import jp.go.aist.rtm.toolscommon.profiles.util.XmlHandler;
+import org.openrtp.namespaces.rts.version02.TargetPort;
 
 public class RTCModel {
 	private String nodeName;
 	private RTCModel parent;
 	private RTCModel top;
 	private List<RTCModel> children = new ArrayList<RTCModel>();
-	private List<RTCModel> members = new ArrayList<RTCModel>();
-	
 	private Component component;
 	private BenchmarkResultModel result;
+	
+	private List<RTCModel> members;
+	private List<RTCConnection> rtcConnections;
 	private RtsProfileExt profile;
 	
     public static XmlHandler rtsProfileOperator = new XmlHandler();
@@ -39,20 +40,33 @@ public class RTCModel {
 	
 	private void load(String fname) {
 	   	try {
-			profile = rtsProfileOperator.loadXmlRts(fname);
+			getTop().profile = rtsProfileOperator.loadXmlRts(fname);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
     	nodeName = fname;
  
-    	members.clear();
-		Iterator<Component> it = profile.getComponents().iterator();
+    	// update the whole list of the member of this system
+    	members = new ArrayList<RTCModel>();
+		Iterator<Component> it = getTop().profile.getComponents().iterator();
 		while ( it.hasNext() ) {
 			RTCModel model = new RTCModel(this, it.next());
 			this.add(model);
 			members.add(model);
 		}
 		this.updateStructure();
+		
+		// update the list of connection between RTCs
+		rtcConnections = new ArrayList<RTCConnection>();
+		Iterator<DataportConnector> connectors = getTop().profile.getDataPortConnectors().iterator();
+		while ( connectors.hasNext() ) {
+			DataportConnector con = connectors.next();
+			TargetPort sourcePort = con.getSourceDataPort();
+			TargetPort targetPort = con.getTargetDataPort();
+			RTCModel smodel = getTop().find(sourcePort.getComponentId(), sourcePort.getInstanceName());
+			RTCModel tmodel = getTop().find(targetPort.getComponentId(), targetPort.getInstanceName());
+			rtcConnections.add(new RTCConnection(smodel, tmodel));
+		}
 	}
 	
 	public String getName() {
@@ -99,8 +113,21 @@ public class RTCModel {
 		return component;
 	}
 	
-	public Iterator<RTCModel> iterator() {
-		return getTop().members.iterator();
+	public List<RTCModel> getRTCMembers() {
+		return getTop().members;
+	}
+	
+	public class RTCConnection {
+		public RTCConnection(RTCModel source, RTCModel target) {
+			this.source = source;
+			this.target = target;
+		}
+		public RTCModel source;
+		public RTCModel target;
+	}
+	
+	public List<RTCConnection> getRTCConnections() {
+		return getTop().rtcConnections;
 	}
 	
 	public RTCModel find(String id, String instanceName) {
