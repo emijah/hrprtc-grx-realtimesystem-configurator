@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -42,6 +43,7 @@ import OpenHRP.BenchmarkServiceHelper;
 import OpenHRP.PlatformInfoHolder;
 import RTC.RTObject;
 
+import com.generalrobotix.model.BenchmarkResultModel;
 import com.generalrobotix.model.RTCModel;
 import com.generalrobotix.ui.util.GrxRTMUtil;
 
@@ -136,9 +138,7 @@ public class BenchmarkOperatorView extends ViewPart {
 							RTCModel model = it.next();
 							String compositeType = model.getComponent().getCompositeType();
 							if ( !compositeType.equals("PeriodicECShared") && !compositeType.equals("PeriodicStateShared") ) {
-								String pathUri = model.getComponent().getPathUri();
-								String hostName = pathUri.split("/")[0];
-								benchmarkTest(model.getComponent().getInstanceName(), hostName);
+								benchmarkTest(model);
 							}
 						}
 					}
@@ -149,7 +149,10 @@ public class BenchmarkOperatorView extends ViewPart {
 		});
 	}
 	
-	private void benchmarkTest(String rtcName, String hostName) {
+	private void benchmarkTest(RTCModel model) {
+		String hostName = model.getHostName();
+		String rtcName = model.getName();
+		
 		NamingContext rnc = GrxRTMUtil.getRootNamingContext(hostName, robotPort_);
 		RTObject rtc = GrxRTMUtil.findRTC(rtcName, rnc);
 		if ( rtc == null ) {
@@ -158,12 +161,20 @@ public class BenchmarkOperatorView extends ViewPart {
 		BenchmarkService benchmark_svc = BenchmarkServiceHelper.narrow(GrxRTMUtil.findService(rtc, "benchmarkService"));
 		PlatformInfoHolder platformInfoH = new PlatformInfoHolder();
 		benchmark_svc.getPlatformInfo(platformInfoH);
-		
 		rtc.get_owned_contexts()[0].start();
 		BenchmarkResultHolder resultH = new BenchmarkResultHolder();
 		benchmark_svc.measure(resultH);
 		rtc.get_owned_contexts()[0].stop();
 		System.out.println(resultH.value.max);
+		BenchmarkResultModel result = new BenchmarkResultModel();
+		result.count = resultH.value.count;
+		result.max = resultH.value.max;
+		result.mean = resultH.value.mean;
+		result.min  = resultH.value.min;
+		result.stddev = resultH.value.stddev;
+		result.date = new Date();
+		model.setResult(result);
+		resultViewer.setSelection(resultViewer.getSelection());
 	}
 	
 	private void testAction() {
