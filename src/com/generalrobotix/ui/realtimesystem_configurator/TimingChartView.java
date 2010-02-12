@@ -1,10 +1,16 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
 import java.awt.Color;
+import java.util.List;
+
+import org.eclipse.jface.viewers.ISelection;
+import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.ui.ISelectionListener;
+import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
@@ -18,25 +24,56 @@ import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.xy.XYDataset;
 import org.jfree.experimental.chart.swt.ChartComposite;
 
+import com.generalrobotix.model.RTCModel;
+
 public class TimingChartView extends ViewPart {
+	private String RtcName1="rtc1", RtcName2;
+	private ChartComposite chartComp1, chartComp2;
+	
 
 	public TimingChartView() {
 	}
 
 	@Override
-	public void createPartControl(Composite parent) {
-        
+	public void createPartControl(final Composite parent) {
+		getSite().getPage().addSelectionListener(new ISelectionListener() {
+			
+			public void selectionChanged(IWorkbenchPart part, ISelection selection) {
+				// TODO 自動生成されたメソッド・スタブ
+				if (part != TimingChartView.this &&
+						selection instanceof IStructuredSelection) {
+					List ret = ((IStructuredSelection) selection).toList();
+					if ( ret.get(0) instanceof RTCModel ) {
+						RTCModel mo = ((RTCModel)ret.get(0)).getTop();
+						List<RTCModel> children = mo.getChildren();
+						RtcName1 = children.get(0).getName();
+						RtcName2 = children.get(1).getName();
+						System.out.println("Rtc1: "+RtcName1+ ", RTC2: "+RtcName2);
+					}
+				}
+				parent.getParent().redraw();
+				parent.getParent().update();
+				chartComp1.redraw();
+				chartComp2.redraw();
+				chartComp1.getChart().setTitle(RtcName1);
+				chartComp2.getChart().setTitle(RtcName2);
+				
+			}
+			
+		});
+		
 		GridLayout gridlayout = new GridLayout(1, false);
 		GridData gdata = new GridData(GridData.FILL_BOTH);
 		parent.setLayout(gridlayout);
-		ChartComposite chartComp1 = new ChartComposite(parent, SWT.H_SCROLL | SWT.V_SCROLL, createCombinedChart(), true);
-		ChartComposite chartComp2 = new ChartComposite(parent, SWT.H_SCROLL | SWT.V_SCROLL, createCombinedChart(), true);
+		chartComp1 = new ChartComposite(parent, SWT.NONE, createCombinedChart(RtcName1), true);
+		chartComp2 = new ChartComposite(parent, SWT.NONE, createCombinedChart(RtcName2), true);
+		
 		chartComp1.setLayoutData(gdata);
 		chartComp2.setLayoutData(gdata);
+		parent.redraw();
 	}
 	
-	public static JFreeChart createCombinedChart() {
-		String title = "Excecution Context";
+	public static JFreeChart createCombinedChart(String title) {
 		String xAxisLabel = "Time";
 		
 		NumberAxis domainAxis = new NumberAxis("Time");
