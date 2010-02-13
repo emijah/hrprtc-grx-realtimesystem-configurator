@@ -53,7 +53,7 @@ public class RTCListView extends ViewPart {
 	        	if (sourcepart != RTCListView.this &&
 	        			selection instanceof IStructuredSelection) {
 	        		List ret = ((IStructuredSelection) selection).toList();
-	        		if ( ret.get(0) instanceof RTCModel ) {
+	        		if ( ret.size() > 0 && ret.get(0) instanceof RTCModel ) {
 	        			viewer.setInput(((RTCModel)ret.get(0)).getTop());
 	        			viewer.refresh();
 	        		}

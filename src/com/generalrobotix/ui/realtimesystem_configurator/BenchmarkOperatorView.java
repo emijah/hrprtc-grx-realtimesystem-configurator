@@ -70,7 +70,10 @@ public class BenchmarkOperatorView extends ViewPart {
 		resultViewer.setInput(currentModels);
 		resultViewer.addSelectionChangedListener(new ISelectionChangedListener() {
 			public void selectionChanged(SelectionChangedEvent event) {
-				selectedModel = (RTCModel)((IStructuredSelection)event.getSelection()).toArray()[0];
+				Object[] l = ((IStructuredSelection)event.getSelection()).toArray();
+				if ( l.length > 0 && l[0] instanceof RTCModel ) {
+					selectedModel = (RTCModel)l[0];
+				}
 			}
 		});
 		getSite().setSelectionProvider(resultViewer);
@@ -293,12 +296,13 @@ public class BenchmarkOperatorView extends ViewPart {
 		public String getColumnText(Object obj, int index) {
 			try {				
 				RTCModel model = (RTCModel)obj;
+				BenchmarkResultModel result = model.getResult();
 				switch(index) {
 				case 0:
-					if ( model.getResult() == null) {
+					if ( result.date == null) {
 						return "empty";
 					}
-					return model.getResult().date.toString();
+					return result.date.toString();
 				case 1:
 					return model.getName();
 				case 2:
