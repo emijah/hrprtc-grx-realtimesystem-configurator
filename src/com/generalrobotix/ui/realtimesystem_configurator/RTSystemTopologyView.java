@@ -2,6 +2,8 @@ package com.generalrobotix.ui.realtimesystem_configurator;
 
 import java.awt.Color;
 import java.awt.Dimension;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -20,8 +22,6 @@ import org.eclipse.swt.widgets.Group;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
-//import org.openrtp.namespaces.rts.version02.DataportConnector;
-//import org.openrtp.namespaces.rts.version02.TargetPort;
 
 import com.generalrobotix.model.RTCModel;
 import com.generalrobotix.model.RTCModel.RTCConnection;
@@ -38,48 +38,43 @@ import edu.uci.ics.jung.visualization.swt.GraphZoomScrollPane;
 import edu.uci.ics.jung.visualization.swt.VisualizationComposite;
 
 public class RTSystemTopologyView extends ViewPart {
-	Graph<RTCModel, Integer> graph;
-
-	VisualizationComposite<RTCModel, Integer> vv;
-
+	private Graph<RTCModel, RTCConnection> graph;
+	private VisualizationComposite<RTCModel, RTCConnection> vv;
 	public RTSystemTopologyView() {
 	}
 
 	@Override
 	public void createPartControl(Composite parent) {
-		
 		getSite().getPage().addSelectionListener(new ISelectionListener() {
 			public void selectionChanged(IWorkbenchPart sourcepart,
 					ISelection selection) {
 				if (sourcepart != RTSystemTopologyView.this
 						&& selection instanceof IStructuredSelection) {
 					List ret = ((IStructuredSelection) selection).toList();
-					if (ret.get(0) instanceof RTCModel) {
-						count = 0;
+					if (ret.size() > 0 && ret.get(0) instanceof RTCModel) {
 						updateStructure(((RTCModel) ret.get(0)).getTop());
 					}
 				}
 			}
 		});
-
 		parent.setLayout(new GridLayout());
-
-		graph = new DirectedOrderedSparseMultigraph<RTCModel, Integer>();
+		
+		graph = new DirectedOrderedSparseMultigraph<RTCModel, RTCConnection>();
 		//graph = Graphs.<RTCModel, Integer>synchronizedDirectedGraph(new DirectedSparseMultigraph<RTCModel, Integer>());
-
-		FRLayout layout = new FRLayout<RTCModel, Integer>(graph);
+		
+		FRLayout layout = new FRLayout<RTCModel, RTCConnection>(graph);
 		layout.setSize(new Dimension(900, 900));
 
-		final GraphZoomScrollPane<RTCModel, Integer> panel = 
-				new GraphZoomScrollPane<RTCModel, Integer>(parent, SWT.NONE, layout, new Dimension(600, 600));
+		GraphZoomScrollPane<RTCModel, RTCConnection> graphPanel = new GraphZoomScrollPane<RTCModel, RTCConnection>(parent, SWT.NONE, layout, new Dimension(600, 600));
+		
 		GridData gridData = new GridData();
 		gridData.grabExcessHorizontalSpace = true;
 		gridData.grabExcessVerticalSpace = true;
 		gridData.horizontalAlignment = GridData.FILL;
 		gridData.verticalAlignment = GridData.FILL;
-		panel.setLayoutData(gridData);
+		graphPanel.setLayoutData(gridData);
 
-		vv = panel.vv;
+		vv = graphPanel.vv;
 		vv.setBackground(Color.white);
 		//vv.getRenderContext().setEdgeShapeTransformer(new EdgeShape.Line<RTCModel, Integer>());
 		vv.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<RTCModel>());
@@ -161,21 +156,41 @@ public class RTSystemTopologyView extends ViewPart {
 		});
 	}
 
-	int count = 0;
-
 	private void updateStructure(RTCModel model) {
-		Iterator<RTCModel> it = model.getRTCMembers().iterator();
-		while (it.hasNext()) {
-			RTCModel m = it.next();
+		RTCConnection[] edges = graph.getEdges().toArray(new RTCConnection[0]);
+		for (int i=edges.length-1; i>0; i--) {
+			graph.removeEdge(edges[i]);
+		}
+		
+		RTCModel[] vertices = graph.getVertices().toArray(new RTCModel[0]);
+		for (int i=vertices.length-1; i>0; i--) {
+			graph.removeVertex(vertices[i]);
+		}
+		
+		Iterator<RTCModel> members = model.getRTCMembers().iterator();
+		while (members.hasNext()) {
+			RTCModel m = members.next();
 			if ( m.getChildren().size()==0 ){
 				graph.addVertex(m);
 			}	
 		}
 		
-		Iterator<RTCConnection> it2 = model.getRTCConnections().iterator();
-		while( it2.hasNext() ) {
-			RTCConnection con = it2.next();
-			graph.addEdge(count++, con.source, con.target);
+		Iterator<RTCConnection> rtccons = model.getRTCConnections().iterator();
+		while( rtccons.hasNext() ) {
+			RTCConnection con = rtccons.next();
+			
+			boolean isContains = false;
+			Iterator<RTCConnection> it = graph.getEdges().iterator();
+			while (it.hasNext() ) {
+				RTCConnection c = it.next();
+				if ( c.equals(con) ) {
+					isContains = true;
+					break;
+				}
+			}
+			if ( !isContains ) {
+				graph.addEdge(con, con.source, con.target);
+			}
 		}
 	}
 
