@@ -82,11 +82,29 @@ public class RTCModel {
 	}
 	
 	public BenchmarkResultModel getResult() {
+		if ( result == null ) {
+			result = new BenchmarkResultModel();
+		}
 		return result;
 	}
 	
 	public void setResult(BenchmarkResultModel result) {
 		this.result = result;
+		getParent().updateResult();
+	}
+	
+	private void updateResult() {
+		if ( this != top ) {
+			getResult().reset();
+			Iterator<RTCModel> it = getChildren().iterator();
+			while ( it.hasNext() ) {
+				RTCModel model = it.next();
+				getResult().max += model.getResult().max;
+				getResult().min += model.getResult().min;
+				getResult().mean += model.getResult().mean;
+			}
+			getParent().updateResult();
+		}
 	}
 	
 	public void add(RTCModel model) {
@@ -124,6 +142,10 @@ public class RTCModel {
 		}
 		public RTCModel source;
 		public RTCModel target;
+		
+		public boolean equals(RTCConnection con) {
+			return (source.equals(con.source) && target.equals(con.target));
+		}
 	}
 	
 	public List<RTCConnection> getRTCConnections() {
@@ -163,5 +185,9 @@ public class RTCModel {
 	 			}
 	 		}
 		}
+	}
+	
+	public String getHostName() {
+		return component.getPathUri().split("/")[0];
 	}
 }
