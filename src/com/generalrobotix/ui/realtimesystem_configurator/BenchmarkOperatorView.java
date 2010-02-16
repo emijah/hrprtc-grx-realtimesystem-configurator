@@ -1,10 +1,13 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
+import java.io.ByteArrayInputStream;
+import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITableLabelProvider;
@@ -22,12 +25,14 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.omg.CosNaming.NamingContext;
 import org.openrtp.namespaces.rts.version02.Component;
 import org.openrtp.namespaces.rts.version02.ExecutionContext;
+import org.ho.yaml.Yaml;
 
 import OpenHRP.BenchmarkResultHolder;
 import OpenHRP.BenchmarkService;
@@ -45,8 +50,8 @@ public class BenchmarkOperatorView extends ViewPart {
 	private String robotHost_ = "localhost";
 	private int robotPort_ = 2809;
 	private RTSystemItem currentSystem;
-	private TreeViewer resultViewer;
-	private static final DecimalFormat FORMAT1 = new DecimalFormat(" 0.000;-0.000");
+	private TreeViewer rtsViewer;
+	private static final DecimalFormat FORMAT_MSEC = new DecimalFormat(" 0.000;-0.000");
 
 	public BenchmarkOperatorView() {
 	}
@@ -55,7 +60,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	public void createPartControl(Composite parent) {		
 		parent.setLayout(new GridLayout(1, false));
 		
-		resultViewer = setupTreeViewer(parent);
+		rtsViewer = setupTreeViewer(parent);
 		
 		Button btn = new Button(parent, SWT.NONE);
 		btn.setText("Execute BenchmarkTest");
@@ -88,7 +93,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	        		List sel = ((IStructuredSelection) selection).toList();
 	        		if ( sel.size() > 0 && sel.get(0) instanceof RTSystemItem ) {
 	        			currentSystem = ((RTSystemItem)sel.get(0));
-	        			resultViewer.setInput(currentSystem);
+	        			rtsViewer.setInput(currentSystem);
 	        		}
 	            }
 	        }
@@ -141,9 +146,9 @@ public class BenchmarkOperatorView extends ViewPart {
 				case 2: return eclist.size() > 0 ? (String.valueOf((int)(1.0/eclist.get(0).getRate()*1000))) : ("");
 				case 3: return robotHost_;
 				case 4: return String.valueOf(robotPort_);
-				case 5: return FORMAT1.format(result.max*1000.0);
-				case 6: return FORMAT1.format(result.min*1000.0);
-				case 7: return FORMAT1.format(result.mean*1000.0);
+				case 5: return FORMAT_MSEC.format(result.max*1000.0);
+				case 6: return FORMAT_MSEC.format(result.min*1000.0);
+				case 7: return FORMAT_MSEC.format(result.mean*1000.0);
 				default: break;
 				}
 			} catch (Exception e) {
@@ -195,6 +200,7 @@ public class BenchmarkOperatorView extends ViewPart {
 			return;
 		}
 		BenchmarkService benchmark_svc = BenchmarkServiceHelper.narrow(GrxRTMUtil.findService(rtc, "benchmarkService"));
+		
 		PlatformInfoHolder platformInfoH = new PlatformInfoHolder();
 		benchmark_svc.getPlatformInfo(platformInfoH);
 		
@@ -205,15 +211,8 @@ public class BenchmarkOperatorView extends ViewPart {
 		
 		rtc.get_owned_contexts()[0].stop();
 		
-		BenchmarkResultModel result = new BenchmarkResultModel();
-		result.count = resultH.value.count;
-		result.max = resultH.value.max;
-		result.mean = resultH.value.mean;
-		result.min  = resultH.value.min;
-		result.stddev = resultH.value.stddev;
-		result.date = new Date();
-		model.setResult(result);
+		model.setResult(new BenchmarkResultModel(resultH.value, platformInfoH.value));
 		
-		resultViewer.refresh();
+		rtsViewer.refresh();
 	}
 }

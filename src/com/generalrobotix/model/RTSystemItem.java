@@ -27,6 +27,10 @@ public class RTSystemItem extends TreeModelItem {
 		load(rtsProfilePath);
 	}
 	
+	public String getId() {
+		return profile.getId();
+	}
+	
 	private void load(String fname) {
 	   	try {
 			profile = rtsProfileOperator.loadXmlRts(fname);
