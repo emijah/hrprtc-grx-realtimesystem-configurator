@@ -1,39 +1,31 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
-import org.eclipse.jface.viewers.ISelectionChangedListener;
+import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.KeyAdapter;
-import org.eclipse.swt.events.KeyEvent;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Image;
-import org.eclipse.swt.layout.FillLayout;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.FileDialog;
-import org.eclipse.swt.widgets.Group;
-import org.eclipse.swt.widgets.Label;
-import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.ui.ISelectionListener;
+import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.omg.CosNaming.NamingContext;
 
@@ -45,38 +37,73 @@ import RTC.RTObject;
 
 import com.generalrobotix.model.BenchmarkResultModel;
 import com.generalrobotix.model.RTCModel;
+import com.generalrobotix.model.RTSystemItem;
+import com.generalrobotix.model.TreeModelItem;
 import com.generalrobotix.ui.util.GrxRTMUtil;
 
 public class BenchmarkOperatorView extends ViewPart {
-	private ArrayList<SetPropertyPanel> propList_ = new ArrayList<SetPropertyPanel>();
 	private String robotHost_ = "localhost";
 	private int robotPort_ = 2809;
-	private List<RTCModel> currentModels;
-	private RTCModel selectedModel;
+	private RTSystemItem currentSystem;
+	private Map<String, RTSystemItem> systemMap = new HashMap<String, RTSystemItem>();
 	private TreeViewer resultViewer;
-	private Text text;
+	private Combo combo;
 
 	public BenchmarkOperatorView() {
 	}
 
 	@Override
 	public void createPartControl(Composite parent) {
-		parent.setLayout(new FillLayout());
 		
-		currentModels = new ArrayList<RTCModel>();
+		getSite().getPage().addSelectionListener(new ISelectionListener() {
+	        public void selectionChanged(IWorkbenchPart sourcepart, ISelection selection) {
+	        	if (sourcepart != BenchmarkOperatorView.this && selection instanceof IStructuredSelection) {
+	        		List ret = ((IStructuredSelection) selection).toList();
+	        		if ( ret.size() > 0 && ret.get(0) instanceof TreeModelItem ) {
+	        			Iterator<TreeModelItem> it = ((TreeModelItem)ret.get(0)).getRoot().getChildren().iterator();
+	        			while( it.hasNext() ) {
+	        				TreeModelItem item = it.next();
+	        				if ( item instanceof RTSystemItem ) {
+	        					RTSystemItem rts = (RTSystemItem)item;
+	        					if ( !systemMap.containsValue(rts) ) {
+	        						String id = rts.getName()+":"+rts.getVersion();
+	        						systemMap.put(id, rts);
+	        						combo.add(id);
+	        						if ( combo.getSelectionIndex() < 0 ) {
+	        							combo.select(0);
+	        						}
+	        					}
+	        				}
+	        			}
+	        		}
+	            }
+	        }
+	    });
+		
+		parent.setLayout(new GridLayout(1, false));
+		
+		combo = new Combo(parent, SWT.SIMPLE);
+		combo.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+		
+		combo.addSelectionListener(new SelectionListener() {
+			public void widgetDefaultSelected(SelectionEvent e) {
+			}
+			public void widgetSelected(SelectionEvent e) {
+				try {
+				String sysName = ((Combo)e.widget).getText();
+				System.out.println("name"+sysName);
+				currentSystem = systemMap.get(sysName);
+				resultViewer.setInput(currentSystem);
+				} catch (Exception ex ) {
+					ex.printStackTrace();
+				}
+			}			
+		});
+		
 		resultViewer = new TreeViewer(parent, SWT.NONE);
 		resultViewer.setContentProvider(new ViewContentProvider());
 		resultViewer.setLabelProvider(new ViewLabelProvider());
-		resultViewer.setInput(currentModels);
-		resultViewer.addSelectionChangedListener(new ISelectionChangedListener() {
-			public void selectionChanged(SelectionChangedEvent event) {
-				Object[] l = ((IStructuredSelection)event.getSelection()).toArray();
-				if ( l.length > 0 && l[0] instanceof RTCModel ) {
-					selectedModel = (RTCModel)l[0];
-				}
-			}
-		});
-		getSite().setSelectionProvider(resultViewer);
+		resultViewer.setInput(currentSystem);
 		
 		Tree tree = resultViewer.getTree();
 		GridData tableLayoutData = new GridData(GridData.FILL_BOTH);
@@ -89,44 +116,10 @@ public class BenchmarkOperatorView extends ViewPart {
 		column = new TreeColumn(tree, SWT.LEFT, 1);
 		column.setText("time");
 		column.setWidth(200);
-
-		GridLayout gridLayout = new GridLayout(1, false);
-		GridData gdata = new GridData(GridData.FILL_BOTH);
 		
-		Group conditionPanel = new Group(parent, SWT.VERTICAL);
-		conditionPanel.setText("Benchmark Settings");
-		conditionPanel.setLayout(gridLayout);
-		
-		Group fileLoadGroup = new Group(conditionPanel, SWT.NONE);
-		fileLoadGroup.setText("Current RTSystem");
-		fileLoadGroup.setLayout(new FillLayout());
-		fileLoadGroup.setLayoutData(gdata);
-		Button btnLoad = new Button(fileLoadGroup, SWT.NONE);
-		btnLoad.setText("Load");
-		btnLoad.addSelectionListener(new SelectionListener() {
-			public void widgetDefaultSelected(SelectionEvent e) {}
+		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
 
-			public void widgetSelected(SelectionEvent e) {
-				FileDialog fdlg = new FileDialog(((Button)e.getSource()).getShell(), SWT.OPEN);
-				fdlg.setFilterExtensions( new String[] {"*.xml"} );
-				fdlg.open();
-				String fname = fdlg.getFileName();
-				if ( fname != null && fname != "" ) {
-					fname = fdlg.getFilterPath() + java.io.File.separator + fname;
-					currentModels.add(new RTCModel(fname));
-					resultViewer.setInput(currentModels);
-					text.setText(fname);
-					resultViewer.refresh();
-					//createProjectDir(fname.replace(".xml", ""));
-				}
-			}
-		});		
-		text = new Text(fileLoadGroup, SWT.NONE);
-
-		propList_.add(new SetPropertyPanel(conditionPanel, SWT.NONE, "Robot Host",  "robotHost", true, robotHost_));
-		propList_.add(new SetPropertyPanel(conditionPanel, SWT.NONE, "Robot Port",  "robotPort", true, new Integer(robotPort_).toString()));
-		
-		Button btn = new Button(conditionPanel, SWT.NONE);
+		Button btn = new Button(parent, SWT.NONE);
 		btn.setText("Execute BenchmarkTest");
 		btn.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {
@@ -135,8 +128,8 @@ public class BenchmarkOperatorView extends ViewPart {
 
 			public void widgetSelected(SelectionEvent e) {
 				try{
-					if ( selectedModel != null) {
-						Iterator<RTCModel> it = selectedModel.getRTCMembers().iterator();
+					if ( currentSystem != null) {
+						Iterator<RTCModel> it = currentSystem.getRTCMembers().iterator();
 						while ( it.hasNext() ) {
 							RTCModel model = it.next();
 							String compositeType = model.getComponent().getCompositeType();
@@ -164,11 +157,14 @@ public class BenchmarkOperatorView extends ViewPart {
 		BenchmarkService benchmark_svc = BenchmarkServiceHelper.narrow(GrxRTMUtil.findService(rtc, "benchmarkService"));
 		PlatformInfoHolder platformInfoH = new PlatformInfoHolder();
 		benchmark_svc.getPlatformInfo(platformInfoH);
+		
 		rtc.get_owned_contexts()[0].start();
+		
 		BenchmarkResultHolder resultH = new BenchmarkResultHolder();
 		benchmark_svc.measure(resultH);
+		
 		rtc.get_owned_contexts()[0].stop();
-		System.out.println(resultH.value.max);
+		
 		BenchmarkResultModel result = new BenchmarkResultModel();
 		result.count = resultH.value.count;
 		result.max = resultH.value.max;
@@ -177,90 +173,14 @@ public class BenchmarkOperatorView extends ViewPart {
 		result.stddev = resultH.value.stddev;
 		result.date = new Date();
 		model.setResult(result);
+		
 		resultViewer.setSelection(resultViewer.getSelection());
 	}
-	
-	private void testAction() {
-		try {
-			Process p = Runtime.getRuntime().exec("python measure.py");
-			BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
-			//BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-			PrintStream ps = new PrintStream(p.getOutputStream());
-			do {
-				System.out.println(stdout.readLine());
-			} while ( stdout.ready() );
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-	}
-	private class SetPropertyPanel extends Composite {
-		private String propName;	
-		private boolean isLocal = true;
-		private String defaultVal;
 
-		private Label    label;
-		private Text  fld;
-		private Button     set;
-		private Button  resume;
-
-
-		public SetPropertyPanel(Composite parent, int style, String _title, String _propName, boolean _isLocal, String _defaultVal) {
-			super(parent, style);
-			GridLayout gridLayout = new GridLayout(4, false);
-			gridLayout.marginWidth = 5;
-			gridLayout.horizontalSpacing = 5;
-			this.setLayout(gridLayout);
-			GridData textGridData = new GridData();
-			textGridData.widthHint = 80;
-			label = new Label(this, SWT.NONE);
-			label.setLayoutData(textGridData);
-			label.setText(_title);
-			fld = new Text(this, SWT.NONE);
-			textGridData.widthHint = 100;
-			fld.setLayoutData(textGridData);
-			set = new Button(this, SWT.NONE);
-			set.setText("Set");
-			resume = new Button(this, SWT.NONE);
-			resume.setText("Resume");
-			propName = _propName;
-			isLocal = _isLocal;
-			defaultVal = _defaultVal;
-
-			fld.addKeyListener(new KeyAdapter() {
-				public void keyPressed(KeyEvent e) {
-					if (e.keyCode == SWT.CR) {
-						//set(); 
-					} else {
-						/*boolean hasChanged = !fld.getText().equals(getValue());
-						set.setEnabled(hasChanged);
-						resume.setEnabled(hasChanged);*/
-					}
-				}
-			});
-
-			set.setEnabled(false);
-			set.addSelectionListener(new SelectionListener() {
-				public void widgetDefaultSelected(SelectionEvent e) {
-				}
-				public void widgetSelected(SelectionEvent e) {
-					//set();
-				}
-			});
-
-			resume.setEnabled(false);
-			resume.addSelectionListener(new SelectionListener() {
-				public void widgetDefaultSelected(SelectionEvent e) {
-				}
-				public void widgetSelected(SelectionEvent e) {
-					//resume();
-				}
-			});
-		}
-	}
 	@Override
 	public void setFocus() {
 	}
+	
 	class ViewContentProvider implements ITreeContentProvider {
 
 		public void inputChanged(Viewer v, Object oldInput, Object newInput) {
@@ -270,25 +190,25 @@ public class BenchmarkOperatorView extends ViewPart {
 		}
 		
 		public Object[] getElements(Object parent) {
-			if ( parent instanceof List ) {
-				return ((List)parent).toArray();
+			if ( parent instanceof RTSystemItem ) {
+				return ((RTSystemItem)parent).getChildren().toArray();
 			}
 			return null;
 		}
 		
 		public Object[] getChildren(Object parentElement) {
-			if ( parentElement instanceof RTCModel ) {
-				return ((RTCModel)parentElement).getChildren().toArray();
+			if ( parentElement instanceof TreeModelItem) {
+				return ((TreeModelItem)parentElement).getChildren().toArray();
 			}
 			return null;
 		}
 		
 		public Object getParent(Object element) {
-			return ((RTCModel)element).getParent();
+			return ((TreeModelItem)element).getParent();
 		}
 		
 		public boolean hasChildren(Object element) {
-			return (((RTCModel)element).getChildren().size() > 0);
+			return (((TreeModelItem)element).getChildren().size() > 0);
 		}
 	}
 	
