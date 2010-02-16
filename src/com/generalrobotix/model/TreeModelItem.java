@@ -1,8 +1,8 @@
 package com.generalrobotix.model;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,7 +16,7 @@ public class TreeModelItem implements IPropertySource {
 	private TreeModelItem parent;
 	private List<TreeModelItem> children = new ArrayList<TreeModelItem>();
 	private TreeModelItem[] checkedItems;
-	private Map<Object, Object> properties = new HashMap<Object, Object>();
+	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
 	
 	public String getName() {
 		return nodeName;
@@ -110,5 +110,9 @@ public class TreeModelItem implements IPropertySource {
 
 	public void setPropertyValue(Object id, Object value) {
 		properties.put(id, value);		
+	}
+	
+	public Map<Object, Object> getPropertyMap() {
+		return properties;
 	}
 }

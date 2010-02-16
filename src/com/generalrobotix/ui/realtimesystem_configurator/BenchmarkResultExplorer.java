@@ -1,12 +1,23 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.channels.FileChannel;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
+import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
@@ -31,8 +42,11 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.part.ViewPart;
+import org.ho.yaml.Yaml;
 
+import com.generalrobotix.model.RTCModel;
 import com.generalrobotix.model.RTSystemItem;
 import com.generalrobotix.model.TreeModelItem;
 
@@ -49,40 +63,12 @@ public class BenchmarkResultExplorer extends ViewPart {
 	public void createPartControl(Composite parent) {
 		parent.setLayout(new GridLayout(1, false));
 		
-		// TODO show dialog to confirm create project
-		try {
-			project = createProjectDir("RealtimeSystemConfiguratorRepository");
-		} catch (CoreException e1) {
-			e1.printStackTrace();
-		}
-		
-		resultViewer = new CheckboxTreeViewer(parent, SWT.NONE);
-		resultViewer.setContentProvider(new ViewContentProvider());
-		resultViewer.setLabelProvider(new ViewLabelProvider());
-		resultViewer.setInput(rootItem);
-		resultViewer.addCheckStateListener(new ICheckStateListener(){
-			public void checkStateChanged(CheckStateChangedEvent event) {
-				TreeModelItem item = (TreeModelItem)event.getElement();
-				resultViewer.setSubtreeChecked(item, event.getChecked());
-				Object[] objList = resultViewer.getCheckedElements();
-				TreeModelItem[] itemList = Arrays.asList(objList).toArray(new TreeModelItem[0]);
-				item.getRoot().setCheckedItems(itemList);
-			}
-		});
-		
+		resultViewer = setupTreeViewer(parent);
 		getSite().setSelectionProvider(resultViewer);
-		
-		Tree tree = resultViewer.getTree();
-		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
-		tree.setHeaderVisible(true);
-		tree.setLinesVisible(true);
-		setHeader(tree, "RTSystem Name", 300, SWT.LEFT, 0);
-		setHeader(tree, "Version",		 100, SWT.LEFT, 1);
-		setHeader(tree, "Date", 		 100, SWT.LEFT, 2);
-		
-		Button btnLoad = new Button(parent, SWT.NONE);
-		btnLoad.setText("Import RTSystem Profile");
-		btnLoad.addSelectionListener(new SelectionListener() {
+
+		Button btnImportSystem = new Button(parent, SWT.NONE);
+		btnImportSystem.setText("Import RTSystem Profile");
+		btnImportSystem.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {}
 
 			public void widgetSelected(SelectionEvent e) {
@@ -92,50 +78,44 @@ public class BenchmarkResultExplorer extends ViewPart {
 				String fname = fdlg.getFilterPath() + java.io.File.separator + fdlg.getFileName();
 				importProfile(fname);
 			}
-		});	
+		});
 		
-		updateList();
-		resultViewer.refresh();
-	}
-
-	private void importProfile(String fname) {
-		if ( fname != null && fname != "" ) {
-			try {
-				File srcFile = new File(fname);
-				RTSystemItem system = new RTSystemItem(fname);
-				rootItem.add(system);
-				String systemId = system.getName();
-				IFolder destFolder  = project.getFolder(systemId);
-				if ( !destFolder.exists() ) {
-					destFolder.create(false, true, progress);
-				}
-				
-				IPath destPath = destFolder.getFile(srcFile.getName()).getLocation();
-
-				FileChannel srcChannel  = new FileInputStream(srcFile.getAbsolutePath()).getChannel();
-				FileChannel destChannel = new FileOutputStream(destPath.toString()).getChannel();
-				try {
-					srcChannel.transferTo(0, srcChannel.size(), destChannel);
-				} finally {
-					srcChannel.close();
-					destChannel.close();
-				}
-			} catch (Exception ex) {
-				ex.printStackTrace();
+		Button btnSaveResult = new Button(parent, SWT.NONE);
+		btnSaveResult.setText("Save All Benchmark Results");
+		btnSaveResult.addSelectionListener(new SelectionListener() {
+			public void widgetDefaultSelected(SelectionEvent e) {}
+			public void widgetSelected(SelectionEvent e) {
+				save();
 			}
-			resultViewer.refresh();
-		}
+		});
+		
+		Button btnLoadResult = new Button(parent, SWT.NONE);
+		btnLoadResult.setText("Load Benchmark Results");
+		btnLoadResult.addSelectionListener(new SelectionListener() {
+			public void widgetDefaultSelected(SelectionEvent e) {}
+			public void widgetSelected(SelectionEvent e) {
+				load();
+			}
+		});
+		
+		// TODO show dialog to confirm create project
+		project = getProject("RealtimeSystemConfiguratorRepository");
+		updateList();
 	}
-	
+
 	@Override
 	public void setFocus() {
 	}
 	
-	public IProject createProjectDir(String projectName) throws CoreException {
+	public IProject getProject(String projectName) {
 		IProject ret = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
 		if ( !ret.exists() ) {
-			ret.create(null);
-			ret.open(progress);
+			try {
+				ret.create(null);
+				ret.open(progress);
+			} catch (CoreException e) {
+				e.printStackTrace();
+			}
 		}
 		return ret;
 	}
@@ -154,6 +134,7 @@ public class BenchmarkResultExplorer extends ViewPart {
 				rootItem.add(rts);
 			}
 		}
+		resultViewer.refresh();
 	}
 	
 	class ViewContentProvider implements ITreeContentProvider {
@@ -213,10 +194,171 @@ public class BenchmarkResultExplorer extends ViewPart {
 			return null;//PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_OBJ_ELEMENT);
 		}
 	}
+
+	private CheckboxTreeViewer setupTreeViewer(Composite parent) {
+		CheckboxTreeViewer viewer = new CheckboxTreeViewer(parent, SWT.NONE);
+		viewer.setContentProvider(new ViewContentProvider());
+		viewer.setLabelProvider(new ViewLabelProvider());
+		viewer.setInput(rootItem);
+		viewer.addCheckStateListener(new ICheckStateListener(){
+			public void checkStateChanged(CheckStateChangedEvent event) {
+				TreeModelItem item = (TreeModelItem)event.getElement();
+				resultViewer.setSubtreeChecked(item, event.getChecked());
+				Object[] objList = resultViewer.getCheckedElements();
+				TreeModelItem[] itemList = Arrays.asList(objList).toArray(new TreeModelItem[0]);
+				item.getRoot().setCheckedItems(itemList);
+			}
+		});
+		
+		Tree tree = viewer.getTree();
+		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
+		tree.setHeaderVisible(true);
+		tree.setLinesVisible(true);
+		setHeader(tree, SWT.LEFT, 0, 300, "RTSystem Name");
+		setHeader(tree, SWT.LEFT, 1, 100, "Version");
+		setHeader(tree, SWT.LEFT, 2, 100, "Date");
+		
+		return viewer;
+	}
+
 	
-	private void setHeader(Tree tree, String text, int width, int alignment, int index) {
+	private void setHeader(Tree tree, int alignment, int index, int width, String text) {
 		TreeColumn column = new TreeColumn(tree, alignment, index);
 		column.setText(text);
 		column.setWidth(width);
 	}
+	
+
+	private void importProfile(String fname) {
+		if ( fname != null && fname != "" ) {
+			try {
+				File srcFile = new File(fname);
+				RTSystemItem system = new RTSystemItem(fname);
+				rootItem.add(system);
+				String systemId = system.getName();
+				IFolder destFolder  = project.getFolder(systemId);
+				if ( !destFolder.exists() ) {
+					destFolder.create(false, true, progress);
+				}
+				
+				IPath destPath = destFolder.getFile(srcFile.getName()).getLocation();
+
+				FileChannel srcChannel  = new FileInputStream(srcFile.getAbsolutePath()).getChannel();
+				FileChannel destChannel = new FileOutputStream(destPath.toString()).getChannel();
+				try {
+					srcChannel.transferTo(0, srcChannel.size(), destChannel);
+				} finally {
+					srcChannel.close();
+					destChannel.close();
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+			resultViewer.refresh();
+		}
+	}
+	
+	private void save() {
+		Iterator<TreeModelItem> it = rootItem.getChildren().iterator();
+		while ( it.hasNext() ) {
+			TreeModelItem item = it.next();
+			if ( item instanceof RTSystemItem ) {
+				RTSystemItem rts = (RTSystemItem)item;
+				String id = rts.getId();
+				IFolder folder = project.getFolder(id);
+				IFile   file = folder.getFile("result.yaml");
+				try {
+					file.setContents(new ByteArrayInputStream(toYaml(rts).getBytes("UTF-8")), true, false, progress);
+				} catch (UnsupportedEncodingException e) {
+					e.printStackTrace();
+				} catch (CoreException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	private String toYaml(RTSystemItem rts) {
+		Map<String, Map<Object, Object>> resultMap = new HashMap<String, Map<Object, Object>>();
+		Iterator<RTCModel> rtcs = rts.getRTCMembers().iterator();
+		while (rtcs.hasNext()) {
+			RTCModel rtc = rtcs.next();
+			resultMap.put("'"+rtc.getId()+"'", rtc.getResult().getPropertyMap());
+		}
+		
+        String result = Yaml.dump(resultMap);
+        result = result.replace("\r\n", "\n"); //$NON-NLS-1$ //$NON-NLS-2$
+        result = result.replace("--- \n", ""); //$NON-NLS-1$ //$NON-NLS-2$
+        result = result.replace("\"", ""); //$NON-NLS-1$ //$NON-NLS-2$
+        result = result.replace(" !java.util.LinkedHashMap", ""); //$NON-NLS-1$ //$NON-NLS-2$
+        result = result.replaceAll("-\n *", "- "); //$NON-NLS-1$ //$NON-NLS-2$
+        result = result.replace(": \n", ":\n"); //$NON-NLS-1$ //$NON-NLS-2$
+        if (result.length() > 0) {
+            result = result.substring(0, result.length() - 1);
+        }
+        if (!result.endsWith("\n")) {
+            result += "\n";
+        }
+
+        return result;
+    }
+	
+	private void load() {
+		Iterator<TreeModelItem> it = rootItem.getChildren().iterator();
+		while ( it.hasNext() ) {
+			TreeModelItem item = it.next();
+			if ( item instanceof RTSystemItem ) {
+				RTSystemItem rts = (RTSystemItem)item;
+				String id = rts.getId();
+				IFolder folder = project.getFolder(id);
+				IFile   file = folder.getFile("result.yaml");
+				Map<String, Map<Object, Object>> ret = fromYaml(file);
+				Iterator<RTCModel> rtcs = rts.getRTCMembers().iterator();
+				while(rtcs.hasNext()) {
+					RTCModel rtc = rtcs.next();
+					Map m = ret.get(rtc.getId());
+					if ( m != null) {
+						rtc.setResult(m);
+					}
+				}
+			}
+		}
+	}
+    
+    private Map<String, Map<Object, Object>> fromYaml(IFile file) {
+        BufferedInputStream bufferedIn = null;
+        ByteArrayOutputStream byteOut = null;
+        try {
+            bufferedIn = new BufferedInputStream(file.getContents(true));
+            byteOut = new ByteArrayOutputStream();
+            int read = 0;
+            while ((read = bufferedIn.read()) != -1) {
+                byteOut.write(read);
+            }
+            Object yaml = Yaml.load(byteOut.toString("UTF-8"));
+            return (Map<String, Map<Object, Object>>)yaml;
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (CoreException e) {
+            e.printStackTrace();
+        } catch (Exception ex) {
+        	ex.printStackTrace();
+        } finally {
+            try {
+                if (bufferedIn != null) {
+                    bufferedIn.close();
+                }
+            } catch (IOException ioe) {
+            }
+            try {
+                if (byteOut != null) {
+                    byteOut.close();
+                }
+            } catch (IOException ioe) {
+            }
+        }
+        return null;
+    }
 }

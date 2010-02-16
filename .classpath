@@ -22,5 +22,6 @@
 	<classpathentry kind="lib" path="libs/jung-swt-rendering-2.0-alpha3.jar"/>
 	<classpathentry kind="lib" path="libs/jung-swt-samples-2.0-alpha3.jar"/>
 	<classpathentry kind="lib" path="libs/jung-swt-visualization-2.0-alpha3.jar"/>
+	<classpathentry kind="lib" path="libs/jyaml-1.3.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -1,13 +1,16 @@
 package com.generalrobotix.model;
 
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 import org.openrtp.namespaces.rts.version02.Component;
 
 public class RTCModel extends TreeModelItem {
 	private Component component;
-	private BenchmarkResultModel result;
 	private RTSystemItem rtsystem;
+	private BenchmarkResultModel result;
+	private Map<String, BenchmarkResultModel> resultMap = new HashMap<String, BenchmarkResultModel>();
 	
     public RTCModel(RTSystemItem rtsystem, Component comp) {
     	this.setRoot(rtsystem.getRoot());
@@ -29,6 +32,10 @@ public class RTCModel extends TreeModelItem {
 		if ( item instanceof RTCModel ) {
 			((RTCModel)item).updateResult();
 		}
+	}
+	
+	public void setResult(Map<Object, Object> properties) {
+		this.result = new BenchmarkResultModel(properties);
 	}
 	
 	private void updateResult() {
@@ -89,5 +96,9 @@ public class RTCModel extends TreeModelItem {
 	
 	public RTSystemItem getRTSystem() {
 		return rtsystem;
+	}
+
+	public String getId() {
+		return component.getId();
 	}
 }
