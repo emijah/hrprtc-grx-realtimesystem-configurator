@@ -35,6 +35,10 @@
             class="com.generalrobotix.ui.realtimesystem_configurator.ViewPart1"
             id="com.generalrobotix.ui.realtimesystem_configurator.view1"
             name="TestView"/>
+      <view
+            class="com.generalrobotix.ui.realtimesystem_configurator.BenchmarkResultExplorer"
+            id="com.generalrobotix.ui.realtimesystem_configurator.benchmarkresult_explorer"
+            name="Benchmark Result Explorer"/>
    </extension> <extension
          point="org.eclipse.ui.editors">
       <editor

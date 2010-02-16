@@ -2,8 +2,6 @@ package com.generalrobotix.ui.realtimesystem_configurator;
 
 import java.awt.Color;
 import java.awt.Dimension;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -24,6 +22,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 
 import com.generalrobotix.model.RTCModel;
+import com.generalrobotix.model.RTSystemItem;
 import com.generalrobotix.model.RTCModel.RTCConnection;
 
 import edu.uci.ics.jung.algorithms.layout.FRLayout;
@@ -52,7 +51,7 @@ public class RTSystemTopologyView extends ViewPart {
 						&& selection instanceof IStructuredSelection) {
 					List ret = ((IStructuredSelection) selection).toList();
 					if (ret.size() > 0 && ret.get(0) instanceof RTCModel) {
-						updateStructure(((RTCModel) ret.get(0)).getTop());
+						updateStructure(((RTCModel) ret.get(0)).getRTSystem());
 					}
 				}
 			}
@@ -66,7 +65,6 @@ public class RTSystemTopologyView extends ViewPart {
 		layout.setSize(new Dimension(900, 900));
 
 		GraphZoomScrollPane<RTCModel, RTCConnection> graphPanel = new GraphZoomScrollPane<RTCModel, RTCConnection>(parent, SWT.NONE, layout, new Dimension(600, 600));
-		
 		GridData gridData = new GridData();
 		gridData.grabExcessHorizontalSpace = true;
 		gridData.grabExcessVerticalSpace = true;
@@ -156,7 +154,7 @@ public class RTSystemTopologyView extends ViewPart {
 		});
 	}
 
-	private void updateStructure(RTCModel model) {
+	private void updateStructure(RTSystemItem model) {
 		RTCConnection[] edges = graph.getEdges().toArray(new RTCConnection[0]);
 		for (int i=edges.length-1; i>0; i--) {
 			graph.removeEdge(edges[i]);
