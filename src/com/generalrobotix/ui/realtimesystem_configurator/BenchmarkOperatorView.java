@@ -1,10 +1,8 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -20,7 +18,6 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
@@ -45,9 +42,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	private String robotHost_ = "localhost";
 	private int robotPort_ = 2809;
 	private RTSystemItem currentSystem;
-	private Map<String, RTSystemItem> systemMap = new HashMap<String, RTSystemItem>();
 	private TreeViewer resultViewer;
-	private Combo combo;
 
 	public BenchmarkOperatorView() {
 	}
@@ -58,23 +53,10 @@ public class BenchmarkOperatorView extends ViewPart {
 		getSite().getPage().addSelectionListener(new ISelectionListener() {
 	        public void selectionChanged(IWorkbenchPart sourcepart, ISelection selection) {
 	        	if (sourcepart != BenchmarkOperatorView.this && selection instanceof IStructuredSelection) {
-	        		List ret = ((IStructuredSelection) selection).toList();
-	        		if ( ret.size() > 0 && ret.get(0) instanceof TreeModelItem ) {
-	        			Iterator<TreeModelItem> it = ((TreeModelItem)ret.get(0)).getRoot().getChildren().iterator();
-	        			while( it.hasNext() ) {
-	        				TreeModelItem item = it.next();
-	        				if ( item instanceof RTSystemItem ) {
-	        					RTSystemItem rts = (RTSystemItem)item;
-	        					if ( !systemMap.containsValue(rts) ) {
-	        						String id = rts.getName()+":"+rts.getVersion();
-	        						systemMap.put(id, rts);
-	        						combo.add(id);
-	        						if ( combo.getSelectionIndex() < 0 ) {
-	        							combo.select(0);
-	        						}
-	        					}
-	        				}
-	        			}
+	        		List sel = ((IStructuredSelection) selection).toList();
+	        		if ( sel.size() > 0 && sel.get(0) instanceof RTSystemItem ) {
+	        			currentSystem = ((RTSystemItem)sel.get(0));
+	        			resultViewer.setInput(currentSystem);
 	        		}
 	            }
 	        }
@@ -82,48 +64,22 @@ public class BenchmarkOperatorView extends ViewPart {
 		
 		parent.setLayout(new GridLayout(1, false));
 		
-		combo = new Combo(parent, SWT.SIMPLE);
-		combo.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
-		
-		combo.addSelectionListener(new SelectionListener() {
-			public void widgetDefaultSelected(SelectionEvent e) {
-			}
-			public void widgetSelected(SelectionEvent e) {
-				try {
-				String sysName = ((Combo)e.widget).getText();
-				System.out.println("name"+sysName);
-				currentSystem = systemMap.get(sysName);
-				resultViewer.setInput(currentSystem);
-				} catch (Exception ex ) {
-					ex.printStackTrace();
-				}
-			}			
-		});
-		
 		resultViewer = new TreeViewer(parent, SWT.NONE);
 		resultViewer.setContentProvider(new ViewContentProvider());
 		resultViewer.setLabelProvider(new ViewLabelProvider());
 		resultViewer.setInput(currentSystem);
 		
 		Tree tree = resultViewer.getTree();
-		GridData tableLayoutData = new GridData(GridData.FILL_BOTH);
-		tree.setLayoutData(tableLayoutData);
+		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
 		tree.setHeaderVisible(true);
 		tree.setLinesVisible(true);
-		TreeColumn column = new TreeColumn(tree, SWT.LEFT, 0);
-		column.setText("date");
-		column.setWidth(100);
-		column = new TreeColumn(tree, SWT.LEFT, 1);
-		column.setText("time");
-		column.setWidth(200);
+		setHeader(tree, "date", 100, SWT.LEFT, 0);
+		setHeader(tree, "time", 200, SWT.LEFT, 1);
 		
-		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
-
 		Button btn = new Button(parent, SWT.NONE);
 		btn.setText("Execute BenchmarkTest");
 		btn.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {
-
 			}
 
 			public void widgetSelected(SelectionEvent e) {
@@ -143,6 +99,12 @@ public class BenchmarkOperatorView extends ViewPart {
 				}
 			}	
 		});
+	}
+	
+	private void setHeader(Tree tree, String text, int width, int alignment, int index) {
+		TreeColumn column = new TreeColumn(tree, alignment, index);
+		column.setText(text);
+		column.setWidth(width);
 	}
 	
 	private void benchmarkTest(RTCModel model) {
@@ -197,10 +159,7 @@ public class BenchmarkOperatorView extends ViewPart {
 		}
 		
 		public Object[] getChildren(Object parentElement) {
-			if ( parentElement instanceof TreeModelItem) {
-				return ((TreeModelItem)parentElement).getChildren().toArray();
-			}
-			return null;
+			return ((TreeModelItem)parentElement).getChildren().toArray();
 		}
 		
 		public Object getParent(Object element) {
@@ -225,12 +184,6 @@ public class BenchmarkOperatorView extends ViewPart {
 					return result.date.toString();
 				case 1:
 					return model.getName();
-				case 2:
-					return "0.0";
-				case 3:
-					return "0.0";
-				case 4:
-					return "0.0";
 				default:
 					break;
 				}
