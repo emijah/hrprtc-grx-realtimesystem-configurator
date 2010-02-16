@@ -35,7 +35,7 @@ public class RTSystemItem extends TreeModelItem {
 		}
     	String[] ids = profile.getId().split(":");
     	setName(ids[1].substring(ids[1].lastIndexOf(".")+1));
-    	version = ids[2];System.out.println("version:"+version);
+    	version = ids[2];
  
     	// update the whole list of the member of this system
     	members = new ArrayList<RTCModel>();
