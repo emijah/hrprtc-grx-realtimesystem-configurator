@@ -32,12 +32,13 @@ import org.jfree.experimental.chart.swt.ChartComposite;
 import org.jfree.ui.RectangleEdge;
 
 import com.generalrobotix.model.RTCModel;
+import com.generalrobotix.model.TreeModelItem;
 
 public class TimingChartView extends ViewPart {
 
 	String RtcName1, RtcName2;
 	String Title1, Title2;
-	List<RTCModel> children;
+	List<TreeModelItem> children;
 	ChartComposite chartComp1, chartComp2;
 	private static TimeSeries s1;
 	private static TimeSeries s2;
@@ -53,18 +54,16 @@ public class TimingChartView extends ViewPart {
 			public void selectionChanged(IWorkbenchPart part, ISelection selection) {
 				String RtcName1 = null;
 				String RtcName2 = null;
-				// TODO 自動生成されたメソッド・スタブ
-				if (part != TimingChartView.this &&
-						selection instanceof IStructuredSelection) {
+				if (part != TimingChartView.this &&	 selection instanceof IStructuredSelection) {
 					List ret = ((IStructuredSelection) selection).toList();
-					if ( ret.get(0) instanceof RTCModel ) {
-						RTCModel mo = ((RTCModel)ret.get(0)).getTop();
-						children = mo.getChildren();
+					if ( ret.get(0) instanceof TreeModelItem ) {
+						TreeModelItem root = ((TreeModelItem)ret.get(0)).getRoot();
+						children = root.getChildren();
 						RtcName1 = children.get(1).getChildren().get(0).getName();
 						s1.setKey(RtcName1);
 						RtcName2 = children.get(1).getChildren().get(1).getName();
 						s2.setKey(RtcName2);
-						List<RTCModel> lists = children.get(1).getChildren();
+						List<TreeModelItem> lists = children.get(1).getChildren();
 						for (int k=0; k<lists.size(); k++){
 							lists.get(k).getName();
 							//System.out.println("."+lists.get(k).getName());
@@ -93,7 +92,7 @@ public class TimingChartView extends ViewPart {
 		parent.redraw();
 	}
 	
-	public static JFreeChart createCombinedChart(String title, List<RTCModel> list) {
+	public static JFreeChart createCombinedChart(String title, List<TreeModelItem> list) {
 		String xAxisLabel = "Time[msec]";
 		
 		NumberAxis domainAxis = new NumberAxis("Time");
@@ -115,7 +114,7 @@ public class TimingChartView extends ViewPart {
 			int size = list.size();
 			for(int j=0; j<size; j++){
 				String[] strData2 = new String[size];
-				List<RTCModel> que = list.get(j).getChildren();
+				List<TreeModelItem> que = list.get(j).getChildren();
 				System.out.print("");
 			}
 		}
