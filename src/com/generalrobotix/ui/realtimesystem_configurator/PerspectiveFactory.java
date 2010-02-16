@@ -17,7 +17,8 @@ public class PerspectiveFactory implements IPerspectiveFactory {
 	     leftTop.addView("jp.go.aist.rtm.repositoryView.view");
 	     
 	     IFolderLayout leftBottom = layout.createFolder("leftBottom_folder", IPageLayout.BOTTOM, (float) 0.5f, "jp.go.aist.rtm.repositoryView.view");
-	     leftBottom.addView("org.eclipse.jdt.ui.PackageExplorer");
+	     //leftBottom.addView("org.eclipse.jdt.ui.PackageExplorer");
+	     leftBottom.addView("com.generalrobotix.ui.realtimesystem_configurator.benchmarkresult_explorer");
 	     
 	     // エディタの右側
 	     IFolderLayout rightTop = layout.createFolder("rightTop_folder", IPageLayout.RIGHT, (float) 0.7f, editorArea);
@@ -28,7 +29,6 @@ public class PerspectiveFactory implements IPerspectiveFactory {
 	     
 	     // エディタの下側に・ビューを生成
 	     IFolderLayout bottom = layout.createFolder("bottom_folder", IPageLayout.BOTTOM, (float) 0.6f, editorArea);
-	     bottom.addView("com.generalrobotix.ui.realtimesystem_configurator.rtclistview");
 	     bottom.addView("com.generalrobotix.ui.realtimesystem_configurator.topologyview");
 	     bottom.addView("com.generalrobotix.ui.realtimesystem_configurator.timingchartview");
 	     bottom.addView("org.eclipse.ui.console.ConsoleView");
