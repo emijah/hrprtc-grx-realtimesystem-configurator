@@ -74,19 +74,12 @@ public class BenchmarkResultExplorer extends ViewPart {
 		getSite().setSelectionProvider(resultViewer);
 		
 		Tree tree = resultViewer.getTree();
-		GridData tableLayoutData = new GridData(GridData.FILL_BOTH);
-		tree.setLayoutData(tableLayoutData);
+		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
 		tree.setHeaderVisible(true);
 		tree.setLinesVisible(true);
-		TreeColumn column = new TreeColumn(tree, SWT.LEFT, 0);
-		column.setText("RTSystem Name");
-		column.setWidth(300);
-		column = new TreeColumn(tree, SWT.LEFT, 1);
-		column.setText("Version");
-		column.setWidth(100);
-		column = new TreeColumn(tree, SWT.LEFT, 2);
-		column.setText("Date");
-		column.setWidth(100);
+		setHeader(tree, "RTSystem Name", 300, SWT.LEFT, 0);
+		setHeader(tree, "Version",		 100, SWT.LEFT, 1);
+		setHeader(tree, "Date", 		 100, SWT.LEFT, 2);
 		
 		Button btnLoad = new Button(parent, SWT.NONE);
 		btnLoad.setText("Import RTSystem Profile");
@@ -220,5 +213,11 @@ public class BenchmarkResultExplorer extends ViewPart {
 		public Image getImage(Object obj) {
 			return null;//PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_OBJ_ELEMENT);
 		}
+	}
+	
+	private void setHeader(Tree tree, String text, int width, int alignment, int index) {
+		TreeColumn column = new TreeColumn(tree, alignment, index);
+		column.setText(text);
+		column.setWidth(width);
 	}
 }
