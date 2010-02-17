@@ -7,6 +7,7 @@ import java.util.List;
 
 import org.apache.commons.collections15.functors.ConstantTransformer;
 import org.eclipse.jface.action.Action;
+import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -79,7 +80,6 @@ public class RTSystemTopologyView extends ViewPart {
 		vcomp.setGraphMouse(graphMouse);
 		vcomp.addKeyListener(graphMouse.getModeKeyListener());
 		
-		IToolBarManager toolbarManager = getViewSite().getActionBars().getToolBarManager();
 		actionMouseMode = new Action("Switch Mouse Mode", Action.AS_CHECK_BOX) {
 			public void run() {
 				if ( this.isChecked() ) {
@@ -94,7 +94,6 @@ public class RTSystemTopologyView extends ViewPart {
 		actionMouseMode.setToolTipText("Switch Mouse Mode");
 		actionMouseMode.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/view_pan.png"));
 		graphMouse.setMode(ModalGraphMouse.Mode.PICKING);
-		toolbarManager.add(actionMouseMode);
 		
 		final ScalingControl scaler = new CrossoverScalingControl();
 		vcomp.scaleToLayout(scaler);
@@ -105,7 +104,6 @@ public class RTSystemTopologyView extends ViewPart {
 		};
 		actionZoomIn.setToolTipText("Zoom In");
 		actionZoomIn.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/zoomin.png"));
-		toolbarManager.add(actionZoomIn);
 		
 		actionZoomOut = new Action("Zoom Out") {
 			public void run() {
@@ -114,7 +112,15 @@ public class RTSystemTopologyView extends ViewPart {
 		};
 		actionZoomOut.setToolTipText("Zoom Out");
 		actionZoomOut.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/zoomout.png"));
+		
+		IToolBarManager toolbarManager = getViewSite().getActionBars().getToolBarManager();
+		toolbarManager.add(actionMouseMode);
+		toolbarManager.add(actionZoomIn);
 		toolbarManager.add(actionZoomOut);
+		IMenuManager menuManager = getViewSite().getActionBars().getMenuManager();
+		menuManager.add(actionMouseMode);
+		menuManager.add(actionZoomIn);
+		menuManager.add(actionZoomOut);
 	}
 
 	private void updateGraphStructure(RTSystemItem model) {
