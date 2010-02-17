@@ -1,5 +1,6 @@
 package com.generalrobotix.model;
 
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -44,10 +45,7 @@ public class RTCModel extends TreeModelItem {
 		while ( it.hasNext() ) {
 			TreeModelItem model = it.next();
 			if ( model instanceof TreeModelItem ) {
-				RTCModel rtcmodel = (RTCModel)model;
-				getResult().max += rtcmodel.getResult().max;
-				getResult().min += rtcmodel.getResult().min;
-				getResult().mean += rtcmodel.getResult().mean;
+				getResult().plus(((RTCModel)model).getResult());
 			}
 		}
 		TreeModelItem item = getParent();

@@ -1,13 +1,9 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
-import java.io.ByteArrayInputStream;
-import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITableLabelProvider;
@@ -25,14 +21,12 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
-import org.eclipse.ui.IFileEditorInput;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.omg.CosNaming.NamingContext;
 import org.openrtp.namespaces.rts.version02.Component;
 import org.openrtp.namespaces.rts.version02.ExecutionContext;
-import org.ho.yaml.Yaml;
 
 import OpenHRP.BenchmarkResultHolder;
 import OpenHRP.BenchmarkService;
@@ -173,14 +167,14 @@ public class BenchmarkOperatorView extends ViewPart {
 		tree.setHeaderVisible(true);
 		tree.setLinesVisible(true);
 		int idx = 0;
-		setHeader(tree, SWT.LEFT, idx++, 200, "ExecutionContext");
+		setHeader(tree, SWT.LEFT, idx++, 100, "ExecutionContext");
 		setHeader(tree, SWT.LEFT, idx++, 100, "Component Name");
-		setHeader(tree, SWT.LEFT, idx++, 100, "Cycle[ms]");
-		setHeader(tree, SWT.LEFT, idx++, 100, "Hostname");
-		setHeader(tree, SWT.LEFT, idx++, 100, "Port");
-		setHeader(tree, SWT.LEFT, idx++, 100, "Max.[ms]");
-		setHeader(tree, SWT.LEFT, idx++, 100, "Min.[ms]");
-		setHeader(tree, SWT.LEFT, idx++, 100, "Ave.[ms]");
+		setHeader(tree, SWT.LEFT, idx++,  80, "Cycle[ms]");
+		setHeader(tree, SWT.LEFT, idx++,  80, "Hostname");
+		setHeader(tree, SWT.LEFT, idx++,  80, "Port");
+		setHeader(tree, SWT.LEFT, idx++,  80, "Max.[ms]");
+		setHeader(tree, SWT.LEFT, idx++,  80, "Min.[ms]");
+		setHeader(tree, SWT.LEFT, idx++,  80, "Ave.[ms]");
 		return viewer;
 	}
 
