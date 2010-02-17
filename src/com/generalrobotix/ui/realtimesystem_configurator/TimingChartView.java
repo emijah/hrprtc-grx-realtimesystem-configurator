@@ -16,6 +16,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.axis.NumberTickUnit;
 import org.jfree.chart.axis.TickUnits;
 import org.jfree.chart.axis.ValueAxis;
@@ -25,6 +26,8 @@ import org.jfree.chart.title.LegendTitle;
 import org.jfree.data.time.FixedMillisecond;
 import org.jfree.data.time.TimeSeries;
 import org.jfree.data.time.TimeSeriesCollection;
+import org.jfree.data.xy.XYSeries;
+import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.experimental.chart.swt.ChartComposite;
 import org.jfree.ui.RectangleEdge;
 
@@ -82,24 +85,22 @@ public class TimingChartView extends ViewPart {
 		XYPlot plot = chart.getXYPlot();
 		chart.setTitle(ecItem.getName());
 		Iterator<TreeModelItem> rtcs = ecItem.getChildren().iterator();
-		int t1 = 0;
-		
-		TimeSeriesCollection dataset = new TimeSeriesCollection();
+		double t1 = 0;
+		XYSeriesCollection dataset = new XYSeriesCollection();
 		while ( rtcs.hasNext() ) {
 			RTComponentItem rtc = (RTComponentItem)rtcs.next();
-			int t2 = (int)(rtc.getResult().max*1000.0) + 1;
-			
-			TimeSeries tseries = new TimeSeries(rtc.getName(), FixedMillisecond.class);
-			tseries.add(new FixedMillisecond(t1), 1);
-			tseries.add(new FixedMillisecond(t2), 1);
+			double t2 = rtc.getResult().max*1000.0;
+			XYSeries xyseries = new XYSeries(rtc.getName());
+			xyseries.add(t1, 1);
+			xyseries.add(t1+t2, 1);
 			t1 += t2;
-
-			dataset.addSeries(tseries);
+			dataset.addSeries(xyseries);
 		}
 		plot.setDataset(dataset);
 		
 		double cycle = 1.0/ecItem.getComponent().getExecutionContexts().get(0).getRate()*1000.0;
 		plot.getDomainAxis().setRange(0.0, cycle);
+		System.out.println(cycle);
 		//TimeSeries cycle = new TimeSeries("cycle", FixedMillisecond.class);
 		//cycle.add(new FixedMillisecond(5), 1);
 		//tscollection.addSeries(cycle);
@@ -130,12 +131,15 @@ public class TimingChartView extends ViewPart {
 		yAxis.setMinorTickCount(1);
 		yAxis.setVisible(false);
 		
-		ValueAxis xAxis = xyplot.getDomainAxis();
-		TickUnits tickUnits = new TickUnits(); 
-		tickUnits.add(new NumberTickUnit(1));
-		xAxis.setStandardTickUnits(tickUnits);
-		xAxis.setAutoRange(false);
-		xAxis.setAutoTickUnitSelection(false);
+		//ValueAxis xAxis = xyplot.getDomainAxis();
+		//TickUnits tickUnits = new TickUnits(); 
+		//tickUnits.add(new NumberTickUnit(0.001));
+		//xAxis.setStandardTickUnits(tickUnits);
+		//xAxis.setAutoRange(false);
+		//xAxis.setAutoTickUnitSelection(false);
+		//xAxis.setTickMarksVisible(true);
+		//xAxis.setMinorTickMarksVisible(true);
+		
 
 		ChartComposite chartcomp = new ChartComposite(parent, SWT.NONE, chart, true);
 		chartcomp.setLayoutData(new GridData(GridData.FILL_BOTH));
