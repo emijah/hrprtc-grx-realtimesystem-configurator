@@ -11,24 +11,16 @@ import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.SelectionEvent;
-import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.widgets.Button;
-import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Group;
-import org.eclipse.ui.IActionBars;
 import org.eclipse.ui.ISelectionListener;
-import org.eclipse.ui.ISharedImages;
 import org.eclipse.ui.IWorkbenchPart;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 import com.generalrobotix.model.RTCModel;
 import com.generalrobotix.model.RTSystemItem;
-import com.generalrobotix.model.TreeModelItem;
 import com.generalrobotix.model.RTCModel.RTCConnection;
 
 import edu.uci.ics.jung.algorithms.layout.FRLayout;
@@ -44,9 +36,10 @@ import edu.uci.ics.jung.visualization.swt.VisualizationComposite;
 
 public class RTSystemTopologyView extends ViewPart {
 	private Graph<RTCModel, RTCConnection> graph;
-	private VisualizationComposite<RTCModel, RTCConnection> vv;
+	private VisualizationComposite<RTCModel, RTCConnection> vcomp;
 	private Action actionZoomIn;
 	private Action actionZoomOut;
+	private Action actionMouseMode;
 	
 	public RTSystemTopologyView() {
 	}
@@ -59,9 +52,9 @@ public class RTSystemTopologyView extends ViewPart {
 					List ret = ((IStructuredSelection) selection).toList();
 					if (ret.size() > 0 ) {
 						if ( ret.get(0) instanceof RTCModel ) {
-							updateStructure(((RTCModel)ret.get(0)).getRTSystem());
+							updateGraphStructure(((RTCModel)ret.get(0)).getRTSystem());
 						} else if ( ret.get(0) instanceof RTSystemItem ) {
-							updateStructure((RTSystemItem)ret.get(0));
+							updateGraphStructure((RTSystemItem)ret.get(0));
 						}
 					}
 				}
@@ -70,110 +63,61 @@ public class RTSystemTopologyView extends ViewPart {
 		parent.setLayout(new GridLayout());
 		
 		graph = new DirectedOrderedSparseMultigraph<RTCModel, RTCConnection>();
-		
 		FRLayout layout = new FRLayout<RTCModel, RTCConnection>(graph);
-		//layout.setSize(new Dimension(300, 300));
-
+		layout.setSize(new Dimension(300, 300));
 		GraphZoomScrollPane<RTCModel, RTCConnection> graphPanel = new GraphZoomScrollPane<RTCModel, RTCConnection>(parent, SWT.NONE, layout, new Dimension(300, 300));
 		graphPanel.setLayoutData(new GridData(GridData.FILL_BOTH|GridData.HORIZONTAL_ALIGN_FILL| GridData.VERTICAL_ALIGN_FILL));
 
-		vv = graphPanel.vv;
-		vv.setBackground(Color.white);
-		vv.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<RTCModel>());
-		vv.setVertexToolTipTransformer(new ToStringLabeller<RTCModel>());
-		vv.getRenderContext().setArrowFillPaintTransformer(new ConstantTransformer(Color.lightGray));
-		vv.getComposite().setLayoutData(new GridData(GridData.FILL_BOTH|GridData.HORIZONTAL_ALIGN_FILL| GridData.VERTICAL_ALIGN_FILL));
+		vcomp = graphPanel.vv;
+		vcomp.setBackground(Color.white);
+		vcomp.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<RTCModel>());
+		vcomp.setVertexToolTipTransformer(new ToStringLabeller<RTCModel>());
+		vcomp.getRenderContext().setArrowFillPaintTransformer(new ConstantTransformer(Color.lightGray));
+		vcomp.getComposite().setLayoutData(new GridData(GridData.FILL_BOTH|GridData.HORIZONTAL_ALIGN_FILL| GridData.VERTICAL_ALIGN_FILL));
 		
-//		final DefaultModalGraphMouse graphMouse = new DefaultModalGraphMouse();
-//		vv.setGraphMouse(graphMouse);
-//		vv.addKeyListener(graphMouse.getModeKeyListener());
-
-		final ScalingControl scaler = new CrossoverScalingControl();
-		vv.scaleToLayout(scaler);
-/*
-		Group controls = new Group(parent, SWT.NONE);
-		GridData gdc = new GridData();
-		gdc.horizontalAlignment = GridData.CENTER;
-		controls.setLayoutData(gdc);
-
-		GridLayout cl = new GridLayout();
-		cl.numColumns = 4;
-		controls.setLayout(cl);
-		controls.setText("controls");
-
-		Group zoom = new Group(controls, SWT.NONE);
-		GridLayout zcl = new GridLayout();
-		zcl.numColumns = 2;
-		zoom.setLayout(zcl);
-		zoom.setText("zoom");*/
-
-		/*Button plus = new Button(zoom, SWT.PUSH);
-		plus.setText("+");
-		plus.addSelectionListener(new SelectionListener() {
-			public void widgetDefaultSelected(SelectionEvent e) {
-			}
-
-			public void widgetSelected(SelectionEvent e) {
-				scaler.scale(vv.getServer(), 1.1f, vv.getCenter());
-			}
-		});
+		final DefaultModalGraphMouse graphMouse = new DefaultModalGraphMouse();
+		vcomp.setGraphMouse(graphMouse);
+		vcomp.addKeyListener(graphMouse.getModeKeyListener());
 		
-		Button minus = new Button(zoom, SWT.PUSH);
-		minus.setText("-");
-		minus.addSelectionListener(new SelectionListener() {
-			public void widgetDefaultSelected(SelectionEvent e) {
-			}
-
-			public void widgetSelected(SelectionEvent e) {
-				scaler.scale(vv.getServer(), 1 / 1.1f, vv.getCenter());
-			}
-		});*/
-
-		/*final Combo combo = new Combo(controls, SWT.READ_ONLY);
-		combo.setItems(new String[] { "Transforming", "Picking" });
-		combo.select(0);
-		combo.addSelectionListener(new SelectionListener() {
-			public void widgetDefaultSelected(SelectionEvent e) {
-			}
-
-			public void widgetSelected(SelectionEvent e) {
-				int i = combo.getSelectionIndex();
-				switch (i) {
-				case 0:
+		IToolBarManager toolbarManager = getViewSite().getActionBars().getToolBarManager();
+		actionMouseMode = new Action("Switch Mouse Mode", Action.AS_CHECK_BOX) {
+			public void run() {
+				if ( this.isChecked() ) {
+					actionMouseMode.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/view_pan_on.png"));
 					graphMouse.setMode(ModalGraphMouse.Mode.TRANSFORMING);
-					break;
-				case 1:
+				} else {
+					actionMouseMode.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/view_pan.png"));
 					graphMouse.setMode(ModalGraphMouse.Mode.PICKING);
-					break;
 				}
 			}
-		});*/
+		};
+		actionMouseMode.setToolTipText("Switch Mouse Mode");
+		actionMouseMode.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/view_pan.png"));
+		graphMouse.setMode(ModalGraphMouse.Mode.PICKING);
+		toolbarManager.add(actionMouseMode);
 		
-		actionZoomIn = new Action() {
+		final ScalingControl scaler = new CrossoverScalingControl();
+		vcomp.scaleToLayout(scaler);
+		actionZoomIn = new Action("Zoom In") {
 			public void run() {
-				scaler.scale(vv.getServer(), 1.1f, vv.getCenter());
+				scaler.scale(vcomp.getServer(), 1.1f, vcomp.getCenter());
 			}
 		};
-		actionZoomIn.setText("+");
 		actionZoomIn.setToolTipText("Zoom In");
-		actionZoomIn.setImageDescriptor(PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_INFO_TSK));
+		actionZoomIn.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/zoomin.png"));
+		toolbarManager.add(actionZoomIn);
 		
-		actionZoomOut = new Action() {
+		actionZoomOut = new Action("Zoom Out") {
 			public void run() {
-				scaler.scale(vv.getServer(), 1/1.1f, vv.getCenter());
+				scaler.scale(vcomp.getServer(), 1/1.1f, vcomp.getCenter());
 			}
 		};
-		actionZoomOut.setText("+");
 		actionZoomOut.setToolTipText("Zoom Out");
-		actionZoomOut.setImageDescriptor(PlatformUI.getWorkbench().getSharedImages().getImageDescriptor(ISharedImages.IMG_OBJS_INFO_TSK));
-		
-		IActionBars bars = getViewSite().getActionBars();
-		IToolBarManager manager = bars.getToolBarManager();
-		manager.add(actionZoomIn);
-		manager.add(actionZoomOut);
+		actionZoomOut.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/zoomout.png"));
+		toolbarManager.add(actionZoomOut);
 	}
 
-	private void updateStructure(RTSystemItem model) {
+	private void updateGraphStructure(RTSystemItem model) {
 		RTCConnection[] edges = graph.getEdges().toArray(new RTCConnection[0]);
 		for (int i=edges.length-1; i>0; i--) {
 			graph.removeEdge(edges[i]);

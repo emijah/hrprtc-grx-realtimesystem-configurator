@@ -37,20 +37,23 @@
             id="com.generalrobotix.ui.realtimesystem_configurator.benchmarkoperator"
             name="Benchmark Operator"/>
       <view
-            class="com.generalrobotix.ui.realtimesystem_configurator.ViewPart1"
-            id="com.generalrobotix.ui.realtimesystem_configurator.view1"
-            name="TestView"/>
-      <view
             class="com.generalrobotix.ui.realtimesystem_configurator.BenchmarkResultExplorer"
             icon="icons/grxrobotrt.png"
             id="com.generalrobotix.ui.realtimesystem_configurator.benchmarkresult_explorer"
             name="Benchmark Result Explorer"/>
-   </extension> <extension
-         point="org.eclipse.ui.editors">
-      <editor
-            default="false"
-            id="jp.go.aist.rtm.systemeditor.editpartfactory"
-            name="RTSystem Editor"/>
+   </extension>
+   <extension
+         point="org.eclipse.ui.actionSets">
+      <actionSet
+            id="com.generalrobotix.ui.realtimesystem_configurator.actionset"
+            label="com.generalrobotix.ui.realtimesystem_configurator.actionset">
+         <action
+               class="com.generalrobotix.ui.realtimesystem_configurator.actionset.TopologyViewZoonInAction"
+               icon="icons/zoomin.png"
+               id="com.generalrobotix.ui.realtimesystem_configurator.topologyviewzoomin"
+               label="com.generalrobotix.ui.realtimesystem_configurator.topologyviewzoomout"
+               style="toggle"/>
+      </actionSet>
    </extension>
    
    
