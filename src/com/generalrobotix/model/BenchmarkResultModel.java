@@ -7,6 +7,12 @@ import OpenHRP.BenchmarkResult;
 import OpenHRP.PlatformInfo;
 
 public class BenchmarkResultModel extends TreeModelItem { 
+	private static final String PROPERTY_DATE = "Date";
+	private static final String PROPERTY_DATACOUNT = "dataCount";
+	private static final String PROPERTY_MAX_DURATION  = "Max. duration";
+	private static final String PROPERTY_MIN_DURATION  = "Min. duration";
+	private static final String PROPERTY_MEAN_DURATION = "Ave. duration";
+	
 	public Date date;
 	public int count;    
 	public double max;
@@ -46,11 +52,19 @@ public class BenchmarkResultModel extends TreeModelItem {
 	}
 	
 	public BenchmarkResultModel(Map<Object, Object> properties) {
-		count = Integer.parseInt(properties.get("dataCount").toString());
-		max = Double.parseDouble(properties.get("Max. duration").toString());
-		min = Double.parseDouble(properties.get("Min. duration").toString());
-		mean = Double.parseDouble(properties.get("Ave. duration").toString());
-
+		count = Integer.parseInt(properties.get(PROPERTY_DATACOUNT).toString());
+		max = Double.parseDouble(properties.get(PROPERTY_MAX_DURATION).toString());
+		min = Double.parseDouble(properties.get(PROPERTY_MIN_DURATION).toString());
+		mean = Double.parseDouble(properties.get(PROPERTY_MEAN_DURATION).toString());
+		Object dateObj = (Object)properties.get(PROPERTY_DATE);
+		if ( dateObj != null ) {
+			try {
+				date = new Date(((Double)dateObj).longValue());
+			} catch (Exception e) {
+				date = null;
+				e.printStackTrace();
+			}
+		}
 		updateProperties();
 	}
 
@@ -65,6 +79,7 @@ public class BenchmarkResultModel extends TreeModelItem {
 	}
 	
 	public void plus(BenchmarkResultModel result) {
+		date = result.date;
 		max  += result.max;
 		min  += result.min;
 		mean += result.mean;
@@ -72,10 +87,13 @@ public class BenchmarkResultModel extends TreeModelItem {
 	}
 	
 	private void updateProperties() {
-		setPropertyValue("dataCount", String.valueOf(count));
-		setPropertyValue("Max. duration", String.valueOf(max));
-		setPropertyValue("Min. duration", String.valueOf(min));
-		setPropertyValue("Ave. duration", String.valueOf(mean));
+		setPropertyValue(PROPERTY_DATACOUNT, String.valueOf(count));
+		setPropertyValue(PROPERTY_MAX_DURATION, String.valueOf(max));
+		setPropertyValue(PROPERTY_MIN_DURATION, String.valueOf(min));
+		setPropertyValue(PROPERTY_MEAN_DURATION, String.valueOf(mean));
+		if ( date != null ) {
+			setPropertyValue(PROPERTY_DATE, String.valueOf(date.getTime()));
+		}
 		/*stddev = value.stddev;
 		date   = new Date();
 		cpuType = value2.cpuType;

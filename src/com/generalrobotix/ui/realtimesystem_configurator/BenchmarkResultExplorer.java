@@ -11,6 +11,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.nio.channels.FileChannel;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -62,6 +63,8 @@ public class BenchmarkResultExplorer extends ViewPart {
 	private NullProgressMonitor progress;
 	private FileDialog fdlg;
 	private List<Action> actionList = new ArrayList<Action>();
+
+	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 
 	public BenchmarkResultExplorer() {
 	}
@@ -207,9 +210,9 @@ public class BenchmarkResultExplorer extends ViewPart {
 					if ( item instanceof RTCModel ) {
 						BenchmarkResultModel result = ((RTCModel)item).getResult();
 						if ( result.date != null ) {
-							return result.date.toString();
+							return FORMAT_DATE1.format(result.date);
 						}
-					} else
+					}
 					return "-";
 				default:
 					break;
@@ -246,9 +249,10 @@ public class BenchmarkResultExplorer extends ViewPart {
 		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
 		tree.setHeaderVisible(true);
 		tree.setLinesVisible(true);
-		setHeader(tree, SWT.LEFT, 0, 300, "RTSystem Name");
-		setHeader(tree, SWT.LEFT, 1, 100, "Version");
-		setHeader(tree, SWT.LEFT, 2, 100, "Date");
+		int idx = 0;
+		setHeader(tree, SWT.LEFT, idx++, 200, "RTSystem Name");
+		setHeader(tree, SWT.LEFT, idx++,  50, "Version");
+		setHeader(tree, SWT.LEFT, idx++, 200, "Date");
 		
 		return viewer;
 	}
