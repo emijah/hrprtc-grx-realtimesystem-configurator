@@ -20,9 +20,9 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 
-import com.generalrobotix.model.RTCModel;
+import com.generalrobotix.model.RTComponentItem;
 import com.generalrobotix.model.RTSystemItem;
-import com.generalrobotix.model.RTCModel.RTCConnection;
+import com.generalrobotix.model.RTComponentItem.RTCConnection;
 
 import edu.uci.ics.jung.algorithms.layout.FRLayout;
 import edu.uci.ics.jung.graph.DirectedOrderedSparseMultigraph;
@@ -36,8 +36,8 @@ import edu.uci.ics.jung.visualization.swt.GraphZoomScrollPane;
 import edu.uci.ics.jung.visualization.swt.VisualizationComposite;
 
 public class RTSystemTopologyView extends ViewPart {
-	private Graph<RTCModel, RTCConnection> graph;
-	private VisualizationComposite<RTCModel, RTCConnection> vcomp;
+	private Graph<RTComponentItem, RTCConnection> graph;
+	private VisualizationComposite<RTComponentItem, RTCConnection> vcomp;
 	private Action actionZoomIn;
 	private Action actionZoomOut;
 	private Action actionMouseMode;
@@ -52,8 +52,8 @@ public class RTSystemTopologyView extends ViewPart {
 				if (sourcepart != RTSystemTopologyView.this	 && selection instanceof IStructuredSelection) {
 					List ret = ((IStructuredSelection) selection).toList();
 					if (ret.size() > 0 ) {
-						if ( ret.get(0) instanceof RTCModel ) {
-							updateGraphStructure(((RTCModel)ret.get(0)).getRTSystem());
+						if ( ret.get(0) instanceof RTComponentItem ) {
+							updateGraphStructure(((RTComponentItem)ret.get(0)).getRTSystem());
 						} else if ( ret.get(0) instanceof RTSystemItem ) {
 							updateGraphStructure((RTSystemItem)ret.get(0));
 						}
@@ -63,16 +63,16 @@ public class RTSystemTopologyView extends ViewPart {
 		});
 		parent.setLayout(new GridLayout());
 		
-		graph = new DirectedOrderedSparseMultigraph<RTCModel, RTCConnection>();
-		FRLayout layout = new FRLayout<RTCModel, RTCConnection>(graph);
+		graph = new DirectedOrderedSparseMultigraph<RTComponentItem, RTCConnection>();
+		FRLayout layout = new FRLayout<RTComponentItem, RTCConnection>(graph);
 		layout.setSize(new Dimension(300, 300));
-		GraphZoomScrollPane<RTCModel, RTCConnection> graphPanel = new GraphZoomScrollPane<RTCModel, RTCConnection>(parent, SWT.NONE, layout, new Dimension(300, 300));
+		GraphZoomScrollPane<RTComponentItem, RTCConnection> graphPanel = new GraphZoomScrollPane<RTComponentItem, RTCConnection>(parent, SWT.NONE, layout, new Dimension(300, 300));
 		graphPanel.setLayoutData(new GridData(GridData.FILL_BOTH|GridData.HORIZONTAL_ALIGN_FILL| GridData.VERTICAL_ALIGN_FILL));
 
 		vcomp = graphPanel.vv;
 		vcomp.setBackground(Color.white);
-		vcomp.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<RTCModel>());
-		vcomp.setVertexToolTipTransformer(new ToStringLabeller<RTCModel>());
+		vcomp.getRenderContext().setVertexLabelTransformer(new ToStringLabeller<RTComponentItem>());
+		vcomp.setVertexToolTipTransformer(new ToStringLabeller<RTComponentItem>());
 		vcomp.getRenderContext().setArrowFillPaintTransformer(new ConstantTransformer(Color.lightGray));
 		vcomp.getComposite().setLayoutData(new GridData(GridData.FILL_BOTH|GridData.HORIZONTAL_ALIGN_FILL| GridData.VERTICAL_ALIGN_FILL));
 		
@@ -129,14 +129,14 @@ public class RTSystemTopologyView extends ViewPart {
 			graph.removeEdge(edges[i]);
 		}
 		
-		RTCModel[] vertices = graph.getVertices().toArray(new RTCModel[0]);
+		RTComponentItem[] vertices = graph.getVertices().toArray(new RTComponentItem[0]);
 		for (int i=vertices.length-1; i>0; i--) {
 			graph.removeVertex(vertices[i]);
 		}
 		
-		Iterator<RTCModel> members = model.getRTCMembers().iterator();
+		Iterator<RTComponentItem> members = model.getRTCMembers().iterator();
 		while (members.hasNext()) {
-			RTCModel m = members.next();
+			RTComponentItem m = members.next();
 			if ( m.getChildren().size()==0 ){
 				graph.addVertex(m);
 			}	

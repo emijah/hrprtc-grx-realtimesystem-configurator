@@ -13,12 +13,12 @@ import org.openrtp.namespaces.rts.version02.RtsProfileExt;
 import org.openrtp.namespaces.rts.version02.TargetComponent;
 import org.openrtp.namespaces.rts.version02.TargetPort;
 
-import com.generalrobotix.model.RTCModel.RTCConnection;
+import com.generalrobotix.model.RTComponentItem.RTCConnection;
 
 public class RTSystemItem extends TreeModelItem {
     private XmlHandler rtsProfileOperator = new XmlHandler();
 	private RtsProfileExt profile;
-	private List<RTCModel> members;
+	private List<RTComponentItem> members;
 	private List<RTCConnection> rtcConnections;
 	private String version;
 	
@@ -42,10 +42,10 @@ public class RTSystemItem extends TreeModelItem {
     	version = ids[2];
  
     	// update the whole list of the member of this system
-    	members = new ArrayList<RTCModel>();
+    	members = new ArrayList<RTComponentItem>();
 		Iterator<Component> it = profile.getComponents().iterator();
 		while ( it.hasNext() ) {
-			RTCModel model = new RTCModel(this, it.next());
+			RTComponentItem model = new RTComponentItem(this, it.next());
 			this.add(model);
 			members.add(model);
 		}
@@ -58,13 +58,13 @@ public class RTSystemItem extends TreeModelItem {
 			DataportConnector con = connectors.next();
 			TargetPort sourcePort = con.getSourceDataPort();
 			TargetPort targetPort = con.getTargetDataPort();
-			RTCModel smodel = findRTC(sourcePort.getComponentId(), sourcePort.getInstanceName());
-			RTCModel tmodel = findRTC(targetPort.getComponentId(), targetPort.getInstanceName());
+			RTComponentItem smodel = findRTC(sourcePort.getComponentId(), sourcePort.getInstanceName());
+			RTComponentItem tmodel = findRTC(targetPort.getComponentId(), targetPort.getInstanceName());
 			rtcConnections.add(new RTCConnection(smodel, tmodel));
 		}
 	}
 	
-	public List<RTCModel> getRTCMembers() {
+	public List<RTComponentItem> getRTCMembers() {
 		return members;
 	}
 	
@@ -76,12 +76,12 @@ public class RTSystemItem extends TreeModelItem {
 		return rtcConnections;
 	}
 	
-	public RTCModel findRTC(String componentId, String instanceId) {
+	public RTComponentItem findRTC(String componentId, String instanceId) {
 		Iterator<TreeModelItem> it = getChildren().iterator();
 		while ( it.hasNext() ) {
 			TreeModelItem item = it.next();
-			if ( item instanceof RTCModel) {
-				RTCModel ret = ((RTCModel)item).findRTC(componentId, instanceId);
+			if ( item instanceof RTComponentItem) {
+				RTComponentItem ret = ((RTComponentItem)item).findRTC(componentId, instanceId);
 				if ( ret != null) {
 					return ret;
 				}
@@ -97,15 +97,15 @@ public class RTSystemItem extends TreeModelItem {
 	private void updateStructure() {
 		for (int i=0;i<getChildren().size(); i++) {
 			TreeModelItem model = getChildren().get(i);
-			if ( !(model instanceof RTCModel) ) {
+			if ( !(model instanceof RTComponentItem) ) {
 				continue;
 			}
-			Component comp = ((RTCModel)model).getComponent();
+			Component comp = ((RTComponentItem)model).getComponent();
 	 		if ( comp.getCompositeType().equals("PeriodicECShared") || comp.getCompositeType().equals("PeriodicStateShared")) {
 	 			Iterator<Participants> it2 = comp.getParticipants().iterator();
 	 			while ( it2.hasNext() ) {
 	 				TargetComponent tcomp = it2.next().getParticipant();
-		 			RTCModel result = findRTC(tcomp.getComponentId(), tcomp.getInstanceName());
+		 			RTComponentItem result = findRTC(tcomp.getComponentId(), tcomp.getInstanceName());
 		 			if ( result != null && !model.getChildren().contains(result)) {
 		 				model.add(result);
 		 			}

@@ -6,7 +6,7 @@ import java.util.Map;
 import OpenHRP.BenchmarkResult;
 import OpenHRP.PlatformInfo;
 
-public class BenchmarkResultModel extends TreeModelItem { 
+public class BenchmarkResultItem extends TreeModelItem { 
 	private static final String PROPERTY_DATE = "Date";
 	private static final String PROPERTY_DATACOUNT = "dataCount";
 	private static final String PROPERTY_MAX_DURATION  = "Max. duration";
@@ -30,7 +30,7 @@ public class BenchmarkResultModel extends TreeModelItem {
 	public String extraData;
 	
 
-	public BenchmarkResultModel(BenchmarkResult value, PlatformInfo value2) {
+	public BenchmarkResultItem(BenchmarkResult value, PlatformInfo value2) {
 		count  = value.count;
 		max    = value.max;
 		mean   = value.mean;
@@ -48,10 +48,10 @@ public class BenchmarkResultModel extends TreeModelItem {
 		updateProperties();
 	}
 
-	public BenchmarkResultModel() {
+	public BenchmarkResultItem() {
 	}
 	
-	public BenchmarkResultModel(Map<Object, Object> properties) {
+	public BenchmarkResultItem(Map<Object, Object> properties) {
 		count = Integer.parseInt(properties.get(PROPERTY_DATACOUNT).toString());
 		max = Double.parseDouble(properties.get(PROPERTY_MAX_DURATION).toString());
 		min = Double.parseDouble(properties.get(PROPERTY_MIN_DURATION).toString());
@@ -78,7 +78,7 @@ public class BenchmarkResultModel extends TreeModelItem {
 		updateProperties();
 	}
 	
-	public void plus(BenchmarkResultModel result) {
+	public void plus(BenchmarkResultItem result) {
 		date = result.date;
 		max  += result.max;
 		min  += result.min;

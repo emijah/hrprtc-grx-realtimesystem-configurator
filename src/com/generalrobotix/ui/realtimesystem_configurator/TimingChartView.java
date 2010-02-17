@@ -25,7 +25,7 @@ import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.experimental.chart.swt.ChartComposite;
 import org.jfree.ui.RectangleEdge;
 
-import com.generalrobotix.model.RTCModel;
+import com.generalrobotix.model.RTComponentItem;
 import com.generalrobotix.model.TreeModelItem;
 
 public class TimingChartView extends ViewPart {
@@ -48,8 +48,8 @@ public class TimingChartView extends ViewPart {
 						TreeModelItem[] checkedItems = root.getCheckedItems();
 						for (int i=0; i<checkedItems.length; i++) {
 							TreeModelItem item = checkedItems[i];
-							if ( item instanceof RTCModel ) {
-								RTCModel rtc = (RTCModel) item;
+							if ( item instanceof RTComponentItem ) {
+								RTComponentItem rtc = (RTComponentItem) item;
 								String compositeType = rtc.getComponent().getCompositeType();
 								//if ( !compositeType.equals("PeriodicECShared") && !compositeType.equals("PeriodicStateShared") ) {
 									chartComp1.getChart().setTitle(rtc.getName());
