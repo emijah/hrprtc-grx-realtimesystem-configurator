@@ -7,36 +7,36 @@ import java.util.Map;
 
 import org.openrtp.namespaces.rts.version02.Component;
 
-public class RTCModel extends TreeModelItem {
+public class RTComponentItem extends TreeModelItem {
 	private Component component;
 	private RTSystemItem rtsystem;
-	private BenchmarkResultModel result;
-	private Map<String, BenchmarkResultModel> resultMap = new HashMap<String, BenchmarkResultModel>();
+	private BenchmarkResultItem result;
+	private Map<String, BenchmarkResultItem> resultMap = new HashMap<String, BenchmarkResultItem>();
 	
-    public RTCModel(RTSystemItem rtsystem, Component comp) {
+    public RTComponentItem(RTSystemItem rtsystem, Component comp) {
     	this.setRoot(rtsystem.getRoot());
     	this.setName(comp.getInstanceName());
     	this.rtsystem = rtsystem;
     	this.component = comp;
     }
 	
-	public BenchmarkResultModel getResult() {
+	public BenchmarkResultItem getResult() {
 		if ( result == null ) {
-			result = new BenchmarkResultModel();
+			result = new BenchmarkResultItem();
 		}
 		return result;
 	}
 	
-	public void setResult(BenchmarkResultModel result) {
+	public void setResult(BenchmarkResultItem result) {
 		this.result = result;
 		TreeModelItem item = getParent();
-		if ( item instanceof RTCModel ) {
-			((RTCModel)item).updateResult();
+		if ( item instanceof RTComponentItem ) {
+			((RTComponentItem)item).updateResult();
 		}
 	}
 	
 	public void setResult(Map<Object, Object> properties) {
-		this.result = new BenchmarkResultModel(properties);
+		this.result = new BenchmarkResultItem(properties);
 	}
 	
 	private void updateResult() {
@@ -45,12 +45,12 @@ public class RTCModel extends TreeModelItem {
 		while ( it.hasNext() ) {
 			TreeModelItem model = it.next();
 			if ( model instanceof TreeModelItem ) {
-				getResult().plus(((RTCModel)model).getResult());
+				getResult().plus(((RTComponentItem)model).getResult());
 			}
 		}
 		TreeModelItem item = getParent();
-		if ( item instanceof RTCModel ) {
-			((RTCModel)item).updateResult();
+		if ( item instanceof RTComponentItem ) {
+			((RTComponentItem)item).updateResult();
 		}
 	}
 	
@@ -59,27 +59,27 @@ public class RTCModel extends TreeModelItem {
 	}
 	
 	static public class RTCConnection {
-		public RTCConnection(RTCModel source, RTCModel target) {
+		public RTCConnection(RTComponentItem source, RTComponentItem target) {
 			this.source = source;
 			this.target = target;
 		}
-		public RTCModel source;
-		public RTCModel target;
+		public RTComponentItem source;
+		public RTComponentItem target;
 		
 		public boolean equals(RTCConnection con) {
 			return (source.equals(con.source) && target.equals(con.target));
 		}
 	}
 	
-	public RTCModel findRTC(String id, String instanceName) {
+	public RTComponentItem findRTC(String id, String instanceName) {
 		if ( component != null && component.getId().equals(id) && component.getInstanceName().equals(instanceName) ) {
 			return this;
 		}
 		Iterator<TreeModelItem> it = getChildren().iterator();
 		while ( it.hasNext()) {
 			TreeModelItem model = it.next();
-			if ( model instanceof RTCModel ) {
-				RTCModel ret = ((RTCModel)model).findRTC(id, instanceName);
+			if ( model instanceof RTComponentItem ) {
+				RTComponentItem ret = ((RTComponentItem)model).findRTC(id, instanceName);
 				if ( ret != null) {
 					return ret;
 				}

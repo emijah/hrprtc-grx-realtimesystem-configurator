@@ -51,8 +51,8 @@ import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.ho.yaml.Yaml;
 
-import com.generalrobotix.model.BenchmarkResultModel;
-import com.generalrobotix.model.RTCModel;
+import com.generalrobotix.model.BenchmarkResultItem;
+import com.generalrobotix.model.RTComponentItem;
 import com.generalrobotix.model.RTSystemItem;
 import com.generalrobotix.model.TreeModelItem;
 
@@ -113,7 +113,7 @@ public class BenchmarkResultExplorer extends ViewPart {
 	public void setFocus() {
 	}
 	
-	public IProject getProject(String projectName) {
+	private IProject getProject(String projectName) {
 		IProject ret = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
 		if ( !ret.exists() ) {
 			try {
@@ -207,8 +207,8 @@ public class BenchmarkResultExplorer extends ViewPart {
 					}
 					return "-";
 				case 2:
-					if ( item instanceof RTCModel ) {
-						BenchmarkResultModel result = ((RTCModel)item).getResult();
+					if ( item instanceof RTComponentItem ) {
+						BenchmarkResultItem result = ((RTComponentItem)item).getResult();
 						if ( result.date != null ) {
 							return FORMAT_DATE1.format(result.date);
 						}
@@ -250,8 +250,8 @@ public class BenchmarkResultExplorer extends ViewPart {
 		tree.setHeaderVisible(true);
 		tree.setLinesVisible(true);
 		int idx = 0;
-		setHeader(tree, SWT.LEFT, idx++, 200, "RTSystem Name");
-		setHeader(tree, SWT.LEFT, idx++,  50, "Version");
+		setHeader(tree, SWT.LEFT, idx++, 250, "RTSystem Name");
+		setHeader(tree, SWT.LEFT, idx++,  50, "Ver.");
 		setHeader(tree, SWT.LEFT, idx++, 200, "Date");
 		
 		return viewer;
@@ -314,9 +314,9 @@ public class BenchmarkResultExplorer extends ViewPart {
 	
 	private String toYaml(RTSystemItem rts) {
 		Map<String, Map<Object, Object>> resultMap = new HashMap<String, Map<Object, Object>>();
-		Iterator<RTCModel> rtcs = rts.getRTCMembers().iterator();
+		Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
 		while (rtcs.hasNext()) {
-			RTCModel rtc = rtcs.next();
+			RTComponentItem rtc = rtcs.next();
 			resultMap.put("'"+rtc.getId()+"'", rtc.getResult().getPropertyMap());
 		}
 		
@@ -347,9 +347,9 @@ public class BenchmarkResultExplorer extends ViewPart {
 				IFolder folder = project.getFolder(id);
 				IFile   file = folder.getFile("result.yaml");
 				Map<String, Map<Object, Object>> ret = fromYaml(file);
-				Iterator<RTCModel> rtcs = rts.getRTCMembers().iterator();
+				Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
 				while(rtcs.hasNext()) {
-					RTCModel rtc = rtcs.next();
+					RTComponentItem rtc = rtcs.next();
 					Map m = ret.get(rtc.getId());
 					if ( m != null) {
 						rtc.setResult(m);

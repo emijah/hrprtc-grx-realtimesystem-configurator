@@ -31,7 +31,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.openrtp.namespaces.rts.version02.Component;
 
-import com.generalrobotix.model.RTCModel;
+import com.generalrobotix.model.RTComponentItem;
 
 public class RTCListView extends ViewPart {
 	private TreeViewer viewer;
@@ -53,8 +53,8 @@ public class RTCListView extends ViewPart {
 	        	if (sourcepart != RTCListView.this &&
 	        			selection instanceof IStructuredSelection) {
 	        		List ret = ((IStructuredSelection) selection).toList();
-	        		if ( ret.size() > 0 && ret.get(0) instanceof RTCModel ) {
-	        			viewer.setInput(((RTCModel)ret.get(0)).getRTSystem());
+	        		if ( ret.size() > 0 && ret.get(0) instanceof RTComponentItem ) {
+	        			viewer.setInput(((RTComponentItem)ret.get(0)).getRTSystem());
 	        			viewer.refresh();
 	        		}
 	            }
@@ -140,25 +140,25 @@ public class RTCListView extends ViewPart {
 		}
 		
 		public Object[] getChildren(Object parentElement) {
-			if ( parentElement instanceof RTCModel ) {
-				return ((RTCModel)parentElement).getChildren().toArray();
+			if ( parentElement instanceof RTComponentItem ) {
+				return ((RTComponentItem)parentElement).getChildren().toArray();
 			}
 			return null;
 		}
 		
 		public Object getParent(Object element) {
-			return ((RTCModel)element).getParent();
+			return ((RTComponentItem)element).getParent();
 		}
 		
 		public boolean hasChildren(Object element) {
-			return (((RTCModel)element).getChildren().size() > 0);
+			return (((RTComponentItem)element).getChildren().size() > 0);
 		}
 	}
 	
 	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider {
 		public String getColumnText(Object obj, int index) {
 			try {
-				RTCModel model = (RTCModel)obj;
+				RTComponentItem model = (RTComponentItem)obj;
 				Component comp = model.getComponent();
 				if (comp == null) 
 					return "";

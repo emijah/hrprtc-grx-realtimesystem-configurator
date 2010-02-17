@@ -4,6 +4,9 @@ import java.text.DecimalFormat;
 import java.util.Iterator;
 import java.util.List;
 
+import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.ResourcesPlugin;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITableLabelProvider;
@@ -19,6 +22,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.ui.ISelectionListener;
@@ -34,8 +38,8 @@ import OpenHRP.BenchmarkServiceHelper;
 import OpenHRP.PlatformInfoHolder;
 import RTC.RTObject;
 
-import com.generalrobotix.model.BenchmarkResultModel;
-import com.generalrobotix.model.RTCModel;
+import com.generalrobotix.model.BenchmarkResultItem;
+import com.generalrobotix.model.RTComponentItem;
 import com.generalrobotix.model.RTSystemItem;
 import com.generalrobotix.model.TreeModelItem;
 import com.generalrobotix.ui.util.GrxRTMUtil;
@@ -53,11 +57,12 @@ public class BenchmarkOperatorView extends ViewPart {
 	@Override
 	public void createPartControl(Composite parent) {		
 		parent.setLayout(new GridLayout(1, false));
-		
+		final Text text = new Text(parent, SWT.NONE);
+		text.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		rtsViewer = setupTreeViewer(parent);
 		
 		Button btn = new Button(parent, SWT.NONE);
-		btn.setText("Execute BenchmarkTest");
+		btn.setText("BenchmarkTest");
 		btn.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {
 			}
@@ -65,9 +70,9 @@ public class BenchmarkOperatorView extends ViewPart {
 			public void widgetSelected(SelectionEvent e) {
 				try{
 					if ( currentSystem != null ) {
-						Iterator<RTCModel> it = currentSystem.getRTCMembers().iterator();
+						Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
 						while ( it.hasNext() ) {
-							RTCModel model = it.next();
+							RTComponentItem model = it.next();
 							String compositeType = model.getComponent().getCompositeType();
 							if ( !compositeType.equals("PeriodicECShared") && !compositeType.equals("PeriodicStateShared") ) {
 								benchmarkTest(model);
@@ -88,6 +93,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	        		if ( sel.size() > 0 && sel.get(0) instanceof RTSystemItem ) {
 	        			currentSystem = ((RTSystemItem)sel.get(0));
 	        			rtsViewer.setInput(currentSystem);
+	        			text.setText(currentSystem.getName()+":"+currentSystem.getVersion());
 	        		}
 	            }
 	        }
@@ -129,8 +135,8 @@ public class BenchmarkOperatorView extends ViewPart {
 	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider {
 		public String getColumnText(Object obj, int index) {
 			try {				
-				RTCModel model = (RTCModel)obj;
-				BenchmarkResultModel result = model.getResult();
+				RTComponentItem model = (RTComponentItem)obj;
+				BenchmarkResultItem result = model.getResult();
 				Component comp = model.getComponent();
 				//if ( comp.getCompositeType().equals("PeriodicECShared") || comp.getCompositeType().equals("PeriodicStateShared") )
 				List<ExecutionContext> eclist = comp.getExecutionContexts();
@@ -184,7 +190,7 @@ public class BenchmarkOperatorView extends ViewPart {
 		column.setText(text);
 	}
 	
-	private void benchmarkTest(RTCModel model) {
+	private void benchmarkTest(RTComponentItem model) {
 		String hostName = model.getHostName();
 		String rtcName = model.getName();
 		
@@ -205,8 +211,25 @@ public class BenchmarkOperatorView extends ViewPart {
 		
 		rtc.get_owned_contexts()[0].stop();
 		
-		model.setResult(new BenchmarkResultModel(resultH.value, platformInfoH.value));
+		model.setResult(new BenchmarkResultItem(resultH.value, platformInfoH.value));
 		
 		rtsViewer.refresh();
+	}
+	
+	private void execPython(String fname) {
+		IProject proj = getProject("RealtimeSystemConfigurator");
+	}
+	
+	public IProject getProject(String projectName) {
+		IProject ret = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
+		if ( !ret.exists() ) {
+			try {
+				ret.create(null);
+				ret.open(null);
+			} catch (CoreException e) {
+				e.printStackTrace();
+			}
+		}
+		return ret;
 	}
 }
