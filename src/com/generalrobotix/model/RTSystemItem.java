@@ -34,34 +34,13 @@ public class RTSystemItem extends TreeModelItem {
 	private void load(String fname) {
 	   	try {
 			profile = rtsProfileOperator.loadXmlRts(fname);
+	    	String[] ids = profile.getId().split(":");
+	    	setName(ids[1].substring(ids[1].lastIndexOf(".")+1));
+	    	version = ids[2];
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-    	String[] ids = profile.getId().split(":");
-    	setName(ids[1].substring(ids[1].lastIndexOf(".")+1));
-    	version = ids[2];
- 
-    	// update the whole list of the member of this system
-    	members = new ArrayList<RTComponentItem>();
-		Iterator<Component> it = profile.getComponents().iterator();
-		while ( it.hasNext() ) {
-			RTComponentItem model = new RTComponentItem(this, it.next());
-			this.add(model);
-			members.add(model);
-		}
 		this.updateStructure();
-		
-		// update the list of connection between RTCs
-		rtcConnections = new ArrayList<RTCConnection>();
-		Iterator<DataportConnector> connectors = profile.getDataPortConnectors().iterator();
-		while ( connectors.hasNext() ) {
-			DataportConnector con = connectors.next();
-			TargetPort sourcePort = con.getSourceDataPort();
-			TargetPort targetPort = con.getTargetDataPort();
-			RTComponentItem smodel = findRTC(sourcePort.getComponentId(), sourcePort.getInstanceName());
-			RTComponentItem tmodel = findRTC(targetPort.getComponentId(), targetPort.getInstanceName());
-			rtcConnections.add(new RTCConnection(smodel, tmodel));
-		}
 	}
 	
 	public List<RTComponentItem> getRTCMembers() {
@@ -77,40 +56,63 @@ public class RTSystemItem extends TreeModelItem {
 	}
 	
 	public RTComponentItem findRTC(String componentId, String instanceId) {
-		Iterator<TreeModelItem> it = getChildren().iterator();
+		Iterator<RTComponentItem> it = members.iterator();
 		while ( it.hasNext() ) {
-			TreeModelItem item = it.next();
-			if ( item instanceof RTComponentItem) {
-				RTComponentItem ret = ((RTComponentItem)item).findRTC(componentId, instanceId);
-				if ( ret != null) {
-					return ret;
-				}
+			RTComponentItem rtc = it.next();
+			Component comp = rtc.getComponent();
+			if ( comp.getId().equals(componentId) && comp.getInstanceName().equals(instanceId) ) {
+				return rtc;
 			}
 		}
 		return null;
 	}
 	
-	
 	/*
 	 * update model structure
 	 */
 	private void updateStructure() {
-		for (int i=0;i<getChildren().size(); i++) {
-			TreeModelItem model = getChildren().get(i);
-			if ( !(model instanceof RTComponentItem) ) {
-				continue;
+    	// update the whole list of the member of this system
+    	members = new ArrayList<RTComponentItem>();
+		Iterator<Component> comps = profile.getComponents().iterator();
+		while ( comps.hasNext() ) {
+			Component comp = comps.next();
+			String type = comp.getCompositeType();
+			RTComponentItem item = null;
+			if ( type.equals("PeriodicECShared") || type.equals("PeriodicStateShared")) {
+				item = new ExecutionContextItem(this, comp);
+			} else {
+				item = new RTComponentItem(this, comp);
 			}
-			Component comp = ((RTComponentItem)model).getComponent();
-	 		if ( comp.getCompositeType().equals("PeriodicECShared") || comp.getCompositeType().equals("PeriodicStateShared")) {
-	 			Iterator<Participants> it2 = comp.getParticipants().iterator();
-	 			while ( it2.hasNext() ) {
-	 				TargetComponent tcomp = it2.next().getParticipant();
+			this.add(item);
+			members.add(item);
+		}
+
+		Iterator<RTComponentItem> rtcs = members.iterator();
+		while ( rtcs.hasNext() ) {
+			RTComponentItem rtc = rtcs.next();
+	 		if ( rtc instanceof ExecutionContextItem ) {
+	 			Iterator<Participants> participants = rtc.getComponent().getParticipants().iterator();
+	 			while ( participants.hasNext() ) {
+	 				TargetComponent tcomp = participants.next().getParticipant();
 		 			RTComponentItem result = findRTC(tcomp.getComponentId(), tcomp.getInstanceName());
-		 			if ( result != null && !model.getChildren().contains(result)) {
-		 				model.add(result);
+		 			if ( result != null && !rtc.getChildren().contains(result)) {
+		 				rtc.add(result);
 		 			}
 	 			}
 	 		}
+		}
+		
+		
+		// update the list of connection between RTCs
+		rtcConnections = new ArrayList<RTCConnection>();
+		Iterator<DataportConnector> connectors = profile.getDataPortConnectors().iterator();
+		while ( connectors.hasNext() ) {
+			DataportConnector con = connectors.next();
+			TargetPort sourcePort = con.getSourceDataPort();
+			TargetPort targetPort = con.getTargetDataPort();
+			RTComponentItem smodel = findRTC(sourcePort.getComponentId(), sourcePort.getInstanceName());
+			RTComponentItem tmodel = findRTC(targetPort.getComponentId(), targetPort.getInstanceName());
+			rtcConnections.add(new RTCConnection(smodel, tmodel));
 		}
 	}
 	
