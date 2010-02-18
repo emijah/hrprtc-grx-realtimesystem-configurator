@@ -39,6 +39,9 @@ import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.dnd.DND;
+import org.eclipse.swt.dnd.Transfer;
+import org.eclipse.swt.dnd.TransferData;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -104,6 +107,9 @@ public class BenchmarkResultExplorer extends ViewPart {
 			manager2.add(action);
 		}
 		
+		Transfer[] transfers = new Transfer[] { org.eclipse.swt.dnd.FileTransfer.getInstance() };
+		resultViewer.addDropSupport(DND.DROP_COPY | DND.DROP_MOVE, transfers, new MyViewerDropListener(resultViewer));
+		
 		// TODO show dialog to confirm create project
 		project = getProject("RealtimeSystemConfiguratorRepository");
 		updateList();
@@ -168,7 +174,7 @@ public class BenchmarkResultExplorer extends ViewPart {
 		public void run() {
 			save();
 		}
-	};	
+	};
 
 	class ViewContentProvider implements ITreeContentProvider {
 
@@ -236,6 +242,7 @@ public class BenchmarkResultExplorer extends ViewPart {
 		viewer.setContentProvider(new ViewContentProvider());
 		viewer.setLabelProvider(new ViewLabelProvider());
 		viewer.setInput(rootItem);
+		//viewer.addDragSupport(DND.DROP_COPY , new Transfer[] {GadgetTransfer.getInstance()}, new GadgetDragListener(viewer));
 		viewer.addCheckStateListener(new ICheckStateListener(){
 			public void checkStateChanged(CheckStateChangedEvent event) {
 				TreeModelItem item = (TreeModelItem)event.getElement();
@@ -272,7 +279,7 @@ public class BenchmarkResultExplorer extends ViewPart {
 				rootItem.add(rts);
 				IFolder destFolder = project.getFolder(rts.getId());
 				if ( !destFolder.exists() ) {
-					destFolder.create(false, true, progress);
+					destFolder.create(true, true, progress);
 				}
 				IPath destPath = destFolder.getFile(srcFile.getName()).getLocation();
 
@@ -401,4 +408,23 @@ public class BenchmarkResultExplorer extends ViewPart {
         }
         return null;
     }
+    
+	public class MyViewerDropListener extends org.eclipse.jface.viewers.ViewerDropAdapter { 
+		protected MyViewerDropListener(Viewer viewer) {
+			super(viewer);
+		}
+
+		@Override
+		public boolean performDrop(Object data) {
+			if ( data instanceof String[] ) {
+				importProfile(((String[])data)[0]);
+			}
+			return false;
+		}
+
+		@Override
+		public boolean validateDrop(Object target, int operation, TransferData transferType) {
+			return org.eclipse.swt.dnd.FileTransfer.getInstance().isSupportedType(transferType);
+		} 
+	} 
 }
