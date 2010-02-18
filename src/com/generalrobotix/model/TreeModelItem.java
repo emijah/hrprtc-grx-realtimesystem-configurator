@@ -17,6 +17,7 @@ public class TreeModelItem implements IPropertySource {
 	private List<TreeModelItem> children = new ArrayList<TreeModelItem>();
 	private TreeModelItem[] checkedItems;
 	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
+	private boolean isSelected = false;
 	
 	public String getName() {
 		return nodeName;

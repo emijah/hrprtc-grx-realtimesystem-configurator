@@ -71,7 +71,7 @@ public class RTSystemItem extends TreeModelItem {
 	 * update model structure
 	 */
 	private void updateStructure() {
-    	// update the whole list of the member of this system
+    	// step1.update the list of rtc item and ec item
     	members = new ArrayList<RTComponentItem>();
 		Iterator<Component> comps = profile.getComponents().iterator();
 		while ( comps.hasNext() ) {
@@ -83,10 +83,10 @@ public class RTSystemItem extends TreeModelItem {
 			} else {
 				item = new RTComponentItem(this, comp);
 			}
-			this.add(item);
 			members.add(item);
 		}
 
+		// step2.update the tree structure
 		Iterator<RTComponentItem> rtcs = members.iterator();
 		while ( rtcs.hasNext() ) {
 			RTComponentItem rtc = rtcs.next();
@@ -102,8 +102,19 @@ public class RTSystemItem extends TreeModelItem {
 	 		}
 		}
 		
+		// step3.insert ec item for not owned rtc
+		List<TreeModelItem> children = this.getChildren();
+		for (int i=0; i<children.size(); i++) {
+			TreeModelItem item = children.get(i);
+			if ( !(item instanceof ExecutionContextItem) && (item instanceof RTComponentItem) ) { // TODO prepare common base class
+				RTComponentItem rtc = (RTComponentItem)item;
+				ExecutionContextItem ecItem = new ExecutionContextItem(this, rtc.getComponent());
+				ecItem.add(rtc);
+				members.add(ecItem);
+			}
+		}
 		
-		// update the list of connection between RTCs
+		// step4.update the list of connection between RTCs
 		rtcConnections = new ArrayList<RTCConnection>();
 		Iterator<DataportConnector> connectors = profile.getDataPortConnectors().iterator();
 		while ( connectors.hasNext() ) {
