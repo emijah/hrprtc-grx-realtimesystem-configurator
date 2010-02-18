@@ -1,0 +1,20 @@
+'RTC:Fumio KANEHIRO, AIST.example.RobotHardware:1.0':
+  dataCount: 100
+  Max. duration: 4.15E-4
+  Min. duration: 9.6E-5
+  Ave. duration: 2.7858E-4
+'RTC:Fumio KANEHIRO, AIST.example.StateHolder:1.0':
+  dataCount: 100
+  Max. duration: 0.001059
+  Min. duration: 1.69E-4
+  Ave. duration: 5.21E-4
+'RTC:Fumio KANEHIRO, AIST.example.SequencePlayer:1.0':
+  dataCount: 100
+  Max. duration: 1.97E-4
+  Min. duration: 5.0E-5
+  Ave. duration: 1.5033000000000003E-4
+'RTC:jp.go.aist.composite.PeriodicECShared.PeriodicECSharedComposite:1.0':
+  dataCount: 0
+  Max. duration: 0.0
+  Min. duration: 0.0
+  Ave. duration: 0.0
