@@ -32,7 +32,6 @@ public class TimingChartView extends ViewPart {
 	private Composite parent;
 	private static final int INITIAL_CHART_NUM = 3;
 	private final static String XAXIS_LABEL = "Time[msec]";
-	
 	public TimingChartView() {
 	}
 	
@@ -41,70 +40,80 @@ public class TimingChartView extends ViewPart {
 		this.parent = parent;//new Composite(parent, SWT.V_SCROLL);
 		this.parent.setLayout( new GridLayout(1, false));
 		
-		updateChart(null, INITIAL_CHART_NUM-1);
+		updateChart(null, 0, false);
 
 		getSite().getPage().addSelectionListener(new ISelectionListener() {
 			public void selectionChanged(IWorkbenchPart part, ISelection selection) {
 				if (part != TimingChartView.this &&	 selection instanceof IStructuredSelection) {
 					List sel = ((IStructuredSelection) selection).toList();
 					if ( sel.size()>0 && sel.get(0) instanceof TreeModelItem ) {
-						TreeModelItem root = ((TreeModelItem)sel.get(0)).getRoot();
-						TreeModelItem[] checkedItems = root.getCheckedItems();
+						TreeModelItem selectedItem = (TreeModelItem)sel.get(0);
+						TreeModelItem root = selectedItem.getRoot();
+						Iterator<TreeModelItem> checkedItems = root.getCheckedItems().iterator();
 						int index = 0;
-						for (int i=0; i<checkedItems.length; i++) {
-							TreeModelItem item = checkedItems[i];
-							if ( item instanceof ExecutionContextItem ) {	
-								updateChart((ExecutionContextItem)item, index++);
+						while ( checkedItems.hasNext() ) {
+							TreeModelItem item = checkedItems.next();
+							if ( item instanceof ExecutionContextItem ) {
+								boolean isSelected = (item == selectedItem) || (item.getChildren().contains(selectedItem));
+								updateChart((ExecutionContextItem)item, index++, isSelected);
 							} 
 						}
-						updateChart(null, index);
+						updateChart(null, index, false);
 					}
 				}
 			}
 		});
 	}
 	
-	private void updateChart(RTComponentItem item, int index) {
-		while ( chartList.size() < index + 1 ) {
+	private void updateChart(RTComponentItem item, int index, boolean isSelected) {
+		while ( chartList.size() < index + 1 || chartList.size() < INITIAL_CHART_NUM ) {
 			chartList.add(createChart(parent));
 		}
 		
+	
 		if ( item == null ) {
-			for (int i=index; i<chartList.size(); i++) {
+			for (int i=chartList.size()-1; i >= index; i--) {
 				ChartComposite comp = chartList.get(i);
-				JFreeChart chart = comp.getChart();
-				chart.getXYPlot().setDataset(null);
-				if ( index+1 > INITIAL_CHART_NUM ) {
-					comp.setVisible(false);
+				if ( i + 1 > INITIAL_CHART_NUM ) {
+					comp.dispose();
+					chartList.remove(i);
+				} else {
+					JFreeChart chart = comp.getChart();
+					chart.setBackgroundPaint(Color.white);
+					chart.setTitle("NO DATA");
+					chart.getXYPlot().getDomainAxis().setUpperBound(5.2);
+					createDataSet(chart, 0.0005);
 				}
-				comp.redraw();
 			}
 			return;
 		}
-
+		
 		JFreeChart chart = chartList.get(index).getChart();
+		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
 		chart.setTitle("ExecutionContext : "+item.getName());
-		XYPlot plot = chart.getXYPlot();
-		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
+		XYSeriesCollection dataset = createDataSet(chart, 1.0/item.getComponent().getExecutionContexts().get(0).getRate()*1000.0);
 		double t1 = 0;
-		XYSeriesCollection dataset = new XYSeriesCollection();
-		//plot.getDomainAxis().setRange(0.0, cycle*1.2);
-		double cycle = 1.0/item.getComponent().getExecutionContexts().get(0).getRate()*1000.0;
-		XYSeries xyseries = new XYSeries("cycle");
-		xyseries.add(cycle-0.005,2);
-		xyseries.add(cycle+0.005,2);
-		dataset.addSeries(xyseries);
+		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
 		while ( rtcs.hasNext() ) {
 			RTComponentItem rtc = (RTComponentItem)rtcs.next();
 			double t2 = rtc.getResult().max*1000.0;
-			xyseries = new XYSeries(rtc.getName());
+			XYSeries xyseries = new XYSeries(rtc.getName());
 			xyseries.add(t1, 1);
 			xyseries.add(t1+t2, 1);
 			t1 += t2;
 			dataset.addSeries(xyseries);
-		}		
-
-		plot.setDataset(dataset);
+		}
+		//chart.getXYPlot().setDataset(dataset);
+	}
+	
+	public XYSeriesCollection createDataSet(JFreeChart chart, double cycle) {
+		XYSeriesCollection dataset = new XYSeriesCollection();
+		XYSeries xyseries = new XYSeries("cycle");
+		xyseries.add(cycle-0.005, 2);
+		xyseries.add(cycle+0.005, 2);
+		dataset.addSeries(xyseries);
+		chart.getXYPlot().setDataset(dataset);
+		return dataset;
 	}
 	
 	private ChartComposite createChart(Composite parent) {

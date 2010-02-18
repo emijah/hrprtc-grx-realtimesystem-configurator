@@ -20,7 +20,7 @@ public class RTComponentItem extends TreeModelItem {
     	this.component = comp;
     	rtsystem.add(this);
     }
-	
+
 	public BenchmarkResultItem getResult() {
 		if ( result == null ) {
 			result = new BenchmarkResultItem();
