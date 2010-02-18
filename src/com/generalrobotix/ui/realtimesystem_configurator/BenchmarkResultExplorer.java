@@ -26,12 +26,12 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.jdt.ui.ISharedImages;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.CheckStateChangedEvent;
 import org.eclipse.jface.viewers.CheckboxTreeViewer;
 import org.eclipse.jface.viewers.ICheckStateListener;
@@ -51,7 +51,6 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
-import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.ho.yaml.Yaml;
@@ -204,6 +203,8 @@ public class BenchmarkResultExplorer extends ViewPart {
 	}
 	
 	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider {
+	    private HashMap<ImageDescriptor, Image> imageMap;
+
 		public String getColumnText(Object obj, int index) {
 			try {				
 				TreeModelItem item = (TreeModelItem)obj;
@@ -231,14 +232,46 @@ public class BenchmarkResultExplorer extends ViewPart {
 			}
 			return "";
 		}
+		
 		public Image getColumnImage(Object obj, int index) {
-			return getImage(obj);
+			if ( index == 0 ) {
+				return getImage(obj);
+			}
+			return null;
 		}
-		public Image getImage(Object obj) {
-			return PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_OBJS_CFILE);
-		}
-	}
+		
+	    public Image getImage(Object element) {
+	        if (element instanceof TreeModelItem) {
+	            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), ((TreeModelItem)element).getIconPath());
+	            return cacheImage(desc);
+	        }
+	        return null;
+	    }
 
+		Image cacheImage(ImageDescriptor desc) {
+			if ( imageMap == null ) {
+				imageMap = new HashMap<ImageDescriptor, Image>();
+			}
+	        Image image = (Image) imageMap.get(desc);
+	        if (image == null) {
+	            image = desc.createImage();
+	            imageMap.put(desc, image);
+	        }
+	        return image;
+	    }
+
+	    public void dispose() {
+	        if (imageMap != null) {
+	        	Iterator<Image> images = imageMap.values().iterator();
+	            while (images.hasNext()) {
+	                images.next().dispose();
+	            }
+	            imageMap = null;
+	        }
+	        super.dispose();
+	    }
+	}
+	
 	private CheckboxTreeViewer setupTreeViewer(Composite parent) {
 		CheckboxTreeViewer viewer = new CheckboxTreeViewer(parent, SWT.NONE);
 		viewer.setContentProvider(new ViewContentProvider());

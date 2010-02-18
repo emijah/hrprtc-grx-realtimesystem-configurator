@@ -1,6 +1,5 @@
 package com.generalrobotix.model;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -12,13 +11,15 @@ public class RTComponentItem extends TreeModelItem {
 	private RTSystemItem rtsystem;
 	private BenchmarkResultItem result;
 	private Map<String, BenchmarkResultItem> resultMap = new HashMap<String, BenchmarkResultItem>();
+	private static final String ICON_PATH = "icons/grxrobotrt.png";
 	
     public RTComponentItem(RTSystemItem rtsystem, Component comp) {
-    	this.setRoot(rtsystem.getRoot());
-    	this.setName(comp.getInstanceName());
+    	setRoot(rtsystem.getRoot());
+    	setName(comp.getInstanceName());
     	this.rtsystem = rtsystem;
     	this.component = comp;
-    	rtsystem.add(this);
+    	this.rtsystem.add(this);
+    	setIconPath(ICON_PATH);
     }
 
 	public BenchmarkResultItem getResult() {

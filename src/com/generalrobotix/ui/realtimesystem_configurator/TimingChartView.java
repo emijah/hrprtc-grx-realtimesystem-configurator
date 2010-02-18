@@ -65,11 +65,10 @@ public class TimingChartView extends ViewPart {
 		});
 	}
 	
-	private void updateChart(RTComponentItem item, int index, boolean isSelected) {
+	private void updateChart(ExecutionContextItem item, int index, boolean isSelected) {
 		while ( chartList.size() < index + 1 || chartList.size() < INITIAL_CHART_NUM ) {
 			chartList.add(createChart(parent));
 		}
-		
 	
 		if ( item == null ) {
 			for (int i=chartList.size()-1; i >= index; i--) {
@@ -82,7 +81,9 @@ public class TimingChartView extends ViewPart {
 					chart.setBackgroundPaint(Color.white);
 					chart.setTitle("NO DATA");
 					chart.getXYPlot().getDomainAxis().setUpperBound(5.2);
-					createDataSet(chart, 0.0005);
+					createDataSet(chart, 0.005);
+					chart.getXYPlot().setNoDataMessage("NO DATA");
+					chart.getXYPlot().getRenderer(0).setSeriesVisibleInLegend(0,false);
 				}
 			}
 			return;
@@ -90,8 +91,8 @@ public class TimingChartView extends ViewPart {
 		
 		JFreeChart chart = chartList.get(index).getChart();
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
-		chart.setTitle("ExecutionContext : "+item.getName());
-		XYSeriesCollection dataset = createDataSet(chart, 1.0/item.getComponent().getExecutionContexts().get(0).getRate()*1000.0);
+		chart.setTitle("EC : "+item.getName());
+		XYSeriesCollection dataset = createDataSet(chart, 1.0/item.getRate()*1000.0);
 		double t1 = 0;
 		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
 		while ( rtcs.hasNext() ) {
@@ -103,7 +104,6 @@ public class TimingChartView extends ViewPart {
 			t1 += t2;
 			dataset.addSeries(xyseries);
 		}
-		//chart.getXYPlot().setDataset(dataset);
 	}
 	
 	public XYSeriesCollection createDataSet(JFreeChart chart, double cycle) {
@@ -136,7 +136,6 @@ public class TimingChartView extends ViewPart {
 		ChartComposite chartComp = new ChartComposite(parent, SWT.NONE, chart, true);
 		chartComp.setLayoutData(new GridData(GridData.FILL_BOTH));
 		chartComp.setRangeZoomable(false);
-		
 		return chartComp;
 	}
 

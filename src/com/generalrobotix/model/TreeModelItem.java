@@ -18,6 +18,7 @@ public class TreeModelItem implements IPropertySource {
 	private List<TreeModelItem> children = new ArrayList<TreeModelItem>();
 	private List<TreeModelItem> checkedItems = new ArrayList<TreeModelItem>();
 	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
+	protected String iconpath = null;
 	
 	public String getName() {
 		return nodeName;
@@ -30,6 +31,14 @@ public class TreeModelItem implements IPropertySource {
 	
 	public String toString() {
 		return getName();
+	}
+	
+	public String getIconPath() {
+		return iconpath;
+	}
+	
+	public void setIconPath(String path) {
+		iconpath = path;
 	}
 	
 	public TreeModelItem getRoot() {

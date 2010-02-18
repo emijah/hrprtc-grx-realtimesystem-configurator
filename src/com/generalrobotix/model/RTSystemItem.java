@@ -21,10 +21,12 @@ public class RTSystemItem extends TreeModelItem {
 	private List<RTComponentItem> members;
 	private List<RTCConnection> rtcConnections;
 	private String version;
+	private static final String ICON_PATH = "icons/folder_open.png";
 	
 	public RTSystemItem(String rtsProfilePath) {
 		setRoot(this);
 		load(rtsProfilePath);
+		setIconPath(ICON_PATH);
 	}
 	
 	public String getId() {
