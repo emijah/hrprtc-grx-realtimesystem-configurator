@@ -82,8 +82,7 @@ public class TimingChartView extends ViewPart {
 					chart.setTitle("NO DATA");
 					chart.getXYPlot().getDomainAxis().setUpperBound(5.2);
 					createDataSet(chart, 0.005);
-					chart.getXYPlot().setNoDataMessage("NO DATA");
-					chart.getXYPlot().getRenderer(0).setSeriesVisibleInLegend(0,false);
+					//chart.getXYPlot().getRenderer(0).setSeriesVisibleInLegend(0,false);
 				}
 			}
 			return;
