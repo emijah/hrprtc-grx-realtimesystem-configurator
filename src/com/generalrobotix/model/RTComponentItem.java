@@ -18,6 +18,7 @@ public class RTComponentItem extends TreeModelItem {
     	this.setName(comp.getInstanceName());
     	this.rtsystem = rtsystem;
     	this.component = comp;
+    	rtsystem.add(this);
     }
 	
 	public BenchmarkResultItem getResult() {

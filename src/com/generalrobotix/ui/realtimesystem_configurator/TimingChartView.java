@@ -16,37 +16,32 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.NumberTickUnit;
-import org.jfree.chart.axis.TickUnits;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.chart.title.LegendTitle;
-import org.jfree.data.time.FixedMillisecond;
-import org.jfree.data.time.TimeSeries;
-import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.experimental.chart.swt.ChartComposite;
-import org.jfree.ui.RectangleEdge;
 
 import com.generalrobotix.model.ExecutionContextItem;
 import com.generalrobotix.model.RTComponentItem;
 import com.generalrobotix.model.TreeModelItem;
 
 public class TimingChartView extends ViewPart {
-	private final static String XAXIS_LABEL = "Time[msec]";
-	List<JFreeChart> chartList = new ArrayList<JFreeChart>();
+	private List<ChartComposite> chartList = new ArrayList<ChartComposite>();
 	private Composite parent;
+	private static final int INITIAL_CHART_NUM = 3;
+	private final static String XAXIS_LABEL = "Time[msec]";
+	
 	public TimingChartView() {
 	}
-
+	
 	@Override
 	public void createPartControl(final Composite parent) {
-		this.parent = parent;
-		parent.setLayout( new GridLayout(1, false));
-		updateChart(null, 0);
+		this.parent = parent;//new Composite(parent, SWT.V_SCROLL);
+		this.parent.setLayout( new GridLayout(1, false));
+		
+		updateChart(null, INITIAL_CHART_NUM-1);
 
 		getSite().getPage().addSelectionListener(new ISelectionListener() {
 			public void selectionChanged(IWorkbenchPart part, ISelection selection) {
@@ -60,94 +55,80 @@ public class TimingChartView extends ViewPart {
 							TreeModelItem item = checkedItems[i];
 							if ( item instanceof ExecutionContextItem ) {	
 								updateChart((ExecutionContextItem)item, index++);
-							}
+							} 
 						}
+						updateChart(null, index);
 					}
 				}
 			}
 		});
 	}
 	
-	private void updateChart(ExecutionContextItem ecItem, int index) {
-		if ( chartList.size() < index + 1 ) {
+	private void updateChart(RTComponentItem item, int index) {
+		while ( chartList.size() < index + 1 ) {
 			chartList.add(createChart(parent));
 		}
 		
-		if ( ecItem == null ) {
-			Iterator<JFreeChart> charts = chartList.iterator();
-			while ( charts.hasNext() ) {
-				JFreeChart chart = charts.next();
+		if ( item == null ) {
+			for (int i=index; i<chartList.size(); i++) {
+				ChartComposite comp = chartList.get(i);
+				JFreeChart chart = comp.getChart();
+				chart.getXYPlot().setDataset(null);
+				if ( index+1 > INITIAL_CHART_NUM ) {
+					comp.setVisible(false);
+				}
+				comp.redraw();
 			}
 			return;
 		}
-		
-		JFreeChart chart = chartList.get(index);
+
+		JFreeChart chart = chartList.get(index).getChart();
+		chart.setTitle("ExecutionContext : "+item.getName());
 		XYPlot plot = chart.getXYPlot();
-		chart.setTitle(ecItem.getName());
-		Iterator<TreeModelItem> rtcs = ecItem.getChildren().iterator();
+		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
 		double t1 = 0;
 		XYSeriesCollection dataset = new XYSeriesCollection();
+		//plot.getDomainAxis().setRange(0.0, cycle*1.2);
+		double cycle = 1.0/item.getComponent().getExecutionContexts().get(0).getRate()*1000.0;
+		XYSeries xyseries = new XYSeries("cycle");
+		xyseries.add(cycle-0.005,2);
+		xyseries.add(cycle+0.005,2);
+		dataset.addSeries(xyseries);
 		while ( rtcs.hasNext() ) {
 			RTComponentItem rtc = (RTComponentItem)rtcs.next();
 			double t2 = rtc.getResult().max*1000.0;
-			XYSeries xyseries = new XYSeries(rtc.getName());
+			xyseries = new XYSeries(rtc.getName());
 			xyseries.add(t1, 1);
 			xyseries.add(t1+t2, 1);
 			t1 += t2;
 			dataset.addSeries(xyseries);
-		}
+		}		
+
 		plot.setDataset(dataset);
-		
-		double cycle = 1.0/ecItem.getComponent().getExecutionContexts().get(0).getRate()*1000.0;
-		plot.getDomainAxis().setRange(0.0, cycle);
-		System.out.println(cycle);
-		//TimeSeries cycle = new TimeSeries("cycle", FixedMillisecond.class);
-		//cycle.add(new FixedMillisecond(5), 1);
-		//tscollection.addSeries(cycle);
 	}
 	
-	private JFreeChart createChart(Composite parent) {
+	private ChartComposite createChart(Composite parent) {
 		JFreeChart chart = ChartFactory.createXYStepAreaChart(
 				"NO DATA", XAXIS_LABEL, null, null, PlotOrientation.VERTICAL,
 				true,   // legend
 				true,   // tooltips
 				false   // urls
 		);
-		
-		LegendTitle legend = chart.getLegend();
-		legend.setPosition(RectangleEdge.BOTTOM);
-		
+
 		XYPlot xyplot = chart.getXYPlot();
 		xyplot.setBackgroundPaint(Color.white);
-		xyplot.setDomainMinorGridlinePaint(Color.white);
-		xyplot.setRangeGridlinePaint(Color.white);
+		xyplot.setDomainGridlinePaint(Color.black);
+		xyplot.setDomainGridlinesVisible(true);
 		
 		ValueAxis yAxis = xyplot.getRangeAxis();
-		yAxis.setUpperBound( 1.5);
-		yAxis.setLowerBound( 0.0);
-		yAxis.setAutoRange(false);
-		yAxis.setLowerMargin(1.0);
-		yAxis.setRange( 0.0, 1.5);
-		yAxis.setMinorTickCount(1);
+		yAxis.setRange(0.0, 1.5);
 		yAxis.setVisible(false);
-		
-		//ValueAxis xAxis = xyplot.getDomainAxis();
-		//TickUnits tickUnits = new TickUnits(); 
-		//tickUnits.add(new NumberTickUnit(0.001));
-		//xAxis.setStandardTickUnits(tickUnits);
-		//xAxis.setAutoRange(false);
-		//xAxis.setAutoTickUnitSelection(false);
-		//xAxis.setTickMarksVisible(true);
-		//xAxis.setMinorTickMarksVisible(true);
-		
 
-		ChartComposite chartcomp = new ChartComposite(parent, SWT.NONE, chart, true);
-		chartcomp.setLayoutData(new GridData(GridData.FILL_BOTH));
-		chartcomp.getChart().getPlot().zoom(1.0);
-		chartcomp.setDomainZoomable(false);
-		chartcomp.setRangeZoomable(false);
+		ChartComposite chartComp = new ChartComposite(parent, SWT.NONE, chart, true);
+		chartComp.setLayoutData(new GridData(GridData.FILL_BOTH));
+		chartComp.setRangeZoomable(false);
 		
-		return chart;
+		return chartComp;
 	}
 
 	@Override

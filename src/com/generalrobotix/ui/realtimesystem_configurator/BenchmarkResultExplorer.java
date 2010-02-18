@@ -135,9 +135,10 @@ public class BenchmarkResultExplorer extends ViewPart {
 						return ( name.endsWith(".xml") );
 					}
 				});
-				
-				RTSystemItem rts = new RTSystemItem(systemprofiles[0].getAbsolutePath());
-				rootItem.add(rts);
+				if ( systemprofiles.length > 0 ) {
+					RTSystemItem rts = new RTSystemItem(systemprofiles[0].getAbsolutePath());
+					rootItem.add(rts);
+				}
 			}
 		}
 		load();
@@ -267,14 +268,12 @@ public class BenchmarkResultExplorer extends ViewPart {
 		if ( fname != null && fname != "" ) {
 			try {
 				File srcFile = new File(fname);
-				RTSystemItem system = new RTSystemItem(fname);
-				rootItem.add(system);
-				String systemId = system.getName();
-				IFolder destFolder  = project.getFolder(systemId);
+				RTSystemItem rts = new RTSystemItem(fname);
+				rootItem.add(rts);
+				IFolder destFolder = project.getFolder(rts.getId());
 				if ( !destFolder.exists() ) {
 					destFolder.create(false, true, progress);
 				}
-				
 				IPath destPath = destFolder.getFile(srcFile.getName()).getLocation();
 
 				FileChannel srcChannel  = new FileInputStream(srcFile.getAbsolutePath()).getChannel();
@@ -345,14 +344,18 @@ public class BenchmarkResultExplorer extends ViewPart {
 				RTSystemItem rts = (RTSystemItem)item;
 				String id = rts.getId();
 				IFolder folder = project.getFolder(id);
-				IFile   file = folder.getFile("result.yaml");
-				Map<String, Map<Object, Object>> ret = fromYaml(file);
-				Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
-				while(rtcs.hasNext()) {
-					RTComponentItem rtc = rtcs.next();
-					Map m = ret.get(rtc.getId());
-					if ( m != null) {
-						rtc.setResult(m);
+				if ( folder.findMember("result.yaml", false) != null ) {
+					IFile file = folder.getFile("result.yaml");
+					Map<String, Map<Object, Object>> ret = fromYaml(file);
+					if ( ret != null ) {
+						Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
+						while(rtcs.hasNext()) {
+							RTComponentItem rtc = rtcs.next();
+							Map m = ret.get(rtc.getId());
+							if ( m != null) {
+								rtc.setResult(m);
+							}
+						}
 					}
 				}
 			}
@@ -360,6 +363,9 @@ public class BenchmarkResultExplorer extends ViewPart {
 	}
     
     private Map<String, Map<Object, Object>> fromYaml(IFile file) {
+    	if ( !file.exists() || file.isPhantom() ) {
+    		return null;
+    	}
         BufferedInputStream bufferedIn = null;
         ByteArrayOutputStream byteOut = null;
         try {
