@@ -1,6 +1,7 @@
 package com.generalrobotix.model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -15,9 +16,8 @@ public class TreeModelItem implements IPropertySource {
 	private TreeModelItem root = this;
 	private TreeModelItem parent;
 	private List<TreeModelItem> children = new ArrayList<TreeModelItem>();
-	private TreeModelItem[] checkedItems;
+	private List<TreeModelItem> checkedItems = new ArrayList<TreeModelItem>();
 	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
-	private boolean isSelected = false;
 	
 	public String getName() {
 		return nodeName;
@@ -49,6 +49,10 @@ public class TreeModelItem implements IPropertySource {
 		return ( root == null );
 	}
 	
+	public boolean hasParent() {
+		return ( parent != null );
+	}
+	
 	public TreeModelItem getParent(){
 		return parent;
 	}
@@ -71,10 +75,11 @@ public class TreeModelItem implements IPropertySource {
 	}
 	
 	public void setCheckedItems(TreeModelItem[] list) {
-		checkedItems = list;
+		checkedItems.clear();
+		checkedItems.addAll(Arrays.asList(list));
 	}
 	
-	public TreeModelItem[] getCheckedItems() {
+	public List<TreeModelItem> getCheckedItems() {
 		return checkedItems;
 	}
 

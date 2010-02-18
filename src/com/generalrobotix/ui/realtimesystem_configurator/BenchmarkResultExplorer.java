@@ -26,6 +26,7 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jdt.ui.ISharedImages;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
 import org.eclipse.jface.action.IMenuManager;
@@ -50,6 +51,7 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.ui.PlatformUI;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.ho.yaml.Yaml;
@@ -233,7 +235,7 @@ public class BenchmarkResultExplorer extends ViewPart {
 			return getImage(obj);
 		}
 		public Image getImage(Object obj) {
-			return null;//PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_OBJ_ELEMENT);
+			return PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_OBJS_CFILE);
 		}
 	}
 
@@ -242,14 +244,30 @@ public class BenchmarkResultExplorer extends ViewPart {
 		viewer.setContentProvider(new ViewContentProvider());
 		viewer.setLabelProvider(new ViewLabelProvider());
 		viewer.setInput(rootItem);
-		//viewer.addDragSupport(DND.DROP_COPY , new Transfer[] {GadgetTransfer.getInstance()}, new GadgetDragListener(viewer));
 		viewer.addCheckStateListener(new ICheckStateListener(){
 			public void checkStateChanged(CheckStateChangedEvent event) {
+				boolean isSelected = event.getChecked();
 				TreeModelItem item = (TreeModelItem)event.getElement();
-				resultViewer.setSubtreeChecked(item, event.getChecked());
-				Object[] objList = resultViewer.getCheckedElements();
-				TreeModelItem[] itemList = Arrays.asList(objList).toArray(new TreeModelItem[0]);
-				item.getRoot().setCheckedItems(itemList);
+				resultViewer.setSubtreeChecked(item, isSelected);
+				List<Object> checkedObjects = Arrays.asList(resultViewer.getCheckedElements());
+				while ( item.hasParent() ) {
+					item = item.getParent();
+					if ( isSelected ) {
+						resultViewer.setChecked(item, true);
+					} else {
+						Iterator<TreeModelItem> children =  item.getChildren().iterator();
+						while ( children.hasNext() ) {
+							if ( checkedObjects.contains(children.next()) ) {
+								isSelected = true;
+								break;
+							}
+						}
+						resultViewer.setChecked(item, isSelected);
+						break;
+					}
+				}
+				checkedObjects = Arrays.asList(resultViewer.getCheckedElements());
+				item.getRoot().setCheckedItems(checkedObjects.toArray(new TreeModelItem[0]));
 			}
 		});
 		
