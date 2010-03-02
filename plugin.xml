@@ -23,12 +23,12 @@
       <view
             category="Realtime System Configurator"
             class="com.generalrobotix.ui.realtimesystem_configurator.TimingChartView"
-            icon="icons/grxrobotrt.png"
+            icon="icons/grxTimingchart.png"
             id="com.generalrobotix.ui.realtimesystem_configurator.timingchartview"
             name="Timing Chart"/>
       <view
             class="com.generalrobotix.ui.realtimesystem_configurator.RTSystemTopologyView"
-            icon="icons/grxrobotrt.png"
+            icon="icons/grxTopology.png"
             id="com.generalrobotix.ui.realtimesystem_configurator.topologyview"
             name="RTSysytem Topology"/>
       <view
