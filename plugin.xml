@@ -16,12 +16,6 @@
             name="Realtime System Configurator"/>
       <view
             category="Realtime System Configurator"
-            class="com.generalrobotix.ui.realtimesystem_configurator.RTCListView"
-            icon="icons/grxrobotrt.png"
-            id="com.generalrobotix.ui.realtimesystem_configurator.rtclistview"
-            name="RTC List"/>
-      <view
-            category="Realtime System Configurator"
             class="com.generalrobotix.ui.realtimesystem_configurator.TimingChartView"
             icon="icons/grxTimingchart.png"
             id="com.generalrobotix.ui.realtimesystem_configurator.timingchartview"
@@ -33,12 +27,12 @@
             name="RTSysytem Topology"/>
       <view
             class="com.generalrobotix.ui.realtimesystem_configurator.BenchmarkOperatorView"
-            icon="icons/grxrobotrt.png"
+            icon="icons/grxBenchMarkOperator.png"
             id="com.generalrobotix.ui.realtimesystem_configurator.benchmarkoperator"
             name="Benchmark Operator"/>
       <view
             class="com.generalrobotix.ui.realtimesystem_configurator.BenchmarkResultExplorer"
-            icon="icons/grxrobotrt.png"
+            icon="icons/grxBenchMarkResultExplorer.png"
             id="com.generalrobotix.ui.realtimesystem_configurator.benchmarkresult_explorer"
             name="Benchmark Result Explorer"/>
    </extension>

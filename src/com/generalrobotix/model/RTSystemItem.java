@@ -21,7 +21,7 @@ public class RTSystemItem extends TreeModelItem {
 	private List<RTComponentItem> members;
 	private List<RTCConnection> rtcConnections;
 	private String version;
-	private static final String ICON_PATH = "icons/folder_open.png";
+	private static final String ICON_PATH = "icons/grxRTS.png";
 	
 	public RTSystemItem(String rtsProfilePath) {
 		setRoot(this);
