@@ -4,7 +4,7 @@ import org.openrtp.namespaces.rts.version02.Component;
 import org.openrtp.namespaces.rts.version02.ExecutionContext;
 
 public class ExecutionContextItem extends RTComponentItem{
-	private static final String ICON_PATH = "icons/grxExecutionContext.png";
+	private static final String ICON_PATH = "icons/ExecutionContext.gif";
 	private ExecutionContext ec;
 	
 	public ExecutionContextItem(RTSystemItem rtsystem, Component comp) {

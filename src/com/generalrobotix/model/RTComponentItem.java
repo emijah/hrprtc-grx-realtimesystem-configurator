@@ -11,7 +11,7 @@ public class RTComponentItem extends TreeModelItem {
 	private RTSystemItem rtsystem;
 	private BenchmarkResultItem result;
 	private Map<String, BenchmarkResultItem> resultMap = new HashMap<String, BenchmarkResultItem>();
-	private static final String ICON_PATH = "icons/grxRTC.png";
+	private static final String ICON_PATH = "icons/Component.png";
 	
     public RTComponentItem(RTSystemItem rtsystem, Component comp) {
     	setRoot(rtsystem.getRoot());
