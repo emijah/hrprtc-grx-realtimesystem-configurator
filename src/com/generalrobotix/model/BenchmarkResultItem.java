@@ -3,8 +3,9 @@ package com.generalrobotix.model;
 import java.util.Date;
 import java.util.Map;
 
-import OpenHRP.BenchmarkResult;
-import OpenHRP.PlatformInfo;
+import OpenRTM.NamedStateLog;
+import OpenRTM.PlatformInfo;
+import RTC.TimedState;
 
 public class BenchmarkResultItem extends TreeModelItem { 
 	private static final String PROPERTY_DATE = "Date";
@@ -23,6 +24,7 @@ public class BenchmarkResultItem extends TreeModelItem {
 	public String cpuType;
 	public int cpuNum;
 	public int cpuFrequency;
+	public int cpuAffinity;
 	public String osName;
 	public String osRelease;
 	public String kernelName; 
@@ -30,16 +32,52 @@ public class BenchmarkResultItem extends TreeModelItem {
 	public String extraData;
 	
 
-	public BenchmarkResultItem(BenchmarkResult value, PlatformInfo value2) {
-		count  = value.count;
-		max    = value.max;
-		mean   = value.mean;
-		min    = value.min;
-		stddev = value.stddev;
+	public BenchmarkResultItem(NamedStateLog namedLog, PlatformInfo value2) {
+		TimedState[] log = namedLog.log;
+		System.out.println("id:"+namedLog.id);
+		count = 0;
+		mean = 0;
+		max = 0;
+		min = 10000;
+		for (int i=0; i<log.length; i++) {
+			int pos = i + namedLog.endPoint + 1;
+			pos = ( pos >= log.length ) ? i : pos;
+			if ( pos+1 >= log.length ) {
+				break;
+			}
+				
+			if ( log[pos].data == 1 && log[pos+1].data == 2) {
+				count ++;
+				i++;
+				double diff = (log[pos+1].tm.sec - log[pos].tm.sec) + (log[pos+1].tm.nsec - log[pos].tm.nsec)*10e-9;
+				max = Math.max(max, diff);
+				min = Math.min(min, diff);
+				mean += diff;
+			}
+		}
+		mean /= (double)count;
+		
+		stddev = 0;
+		for ( int i = 1; i < count; i++ ) {
+			int pos = i + namedLog.endPoint + 1;
+			pos = ( pos >= log.length ) ? i : pos;
+			if ( pos+1 >= log.length ) {
+				break;
+			}
+			if ( log[pos].data == 1 && log[pos+1].data == 2) {
+				count ++;
+				i++;
+				stddev += Math.pow(((log[pos+1].tm.sec - log[pos].tm.sec) + (log[pos+1].tm.nsec - log[pos].tm.nsec)*10e-9)-mean, 2);
+			}
+	    }
+		// Change to ( n - 1 ) to n if you have complete data instead of a sample.
+		stddev = Math.sqrt( stddev / count );
+
 		date   = new Date();
 		cpuType = value2.cpuType;
 		cpuNum = value2.cpuNum;
 		cpuFrequency = value2.cpuFrequency;
+		cpuAffinity = value2.cpuAffinity;
 		osName = value2.osName;
 		osRelease = value2.osRelease;
 		kernelName = value2.kernelName;
