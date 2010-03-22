@@ -32,11 +32,16 @@ import org.omg.CosNaming.NamingContext;
 import org.openrtp.namespaces.rts.version02.Component;
 import org.openrtp.namespaces.rts.version02.ExecutionContext;
 
-import OpenHRP.BenchmarkResultHolder;
-import OpenHRP.BenchmarkService;
-import OpenHRP.BenchmarkServiceHelper;
-import OpenHRP.PlatformInfoHolder;
+import OpenRTM.BenchmarkService;
+import OpenRTM.BenchmarkServiceHelper;
+import OpenRTM.NamedStateLog;
+import OpenRTM.PlatformInfo;
+import OpenRTM.PlatformInfoHolder;
 import RTC.RTObject;
+
+import _SDOPackage.InternalError;
+import _SDOPackage.InvalidParameter;
+import _SDOPackage.NotAvailable;
 
 import com.generalrobotix.model.BenchmarkResultItem;
 import com.generalrobotix.model.RTComponentItem;
@@ -199,19 +204,29 @@ public class BenchmarkOperatorView extends ViewPart {
 		if ( rtc == null ) {
 			return;
 		}
-		BenchmarkService benchmark_svc = BenchmarkServiceHelper.narrow(GrxRTMUtil.findService(rtc, "benchmarkService"));
+		BenchmarkService benchmark_svc = null;
+		try {
+			benchmark_svc = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
+		} catch (InvalidParameter e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (NotAvailable e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InternalError e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		
-		PlatformInfoHolder platformInfoH = new PlatformInfoHolder();
-		benchmark_svc.getPlatformInfo(platformInfoH);
+		PlatformInfo pinfo = benchmark_svc.get_platform_info();
 		
 		rtc.get_owned_contexts()[0].start();
 		
-		BenchmarkResultHolder resultH = new BenchmarkResultHolder();
-		benchmark_svc.measure(resultH);
+		NamedStateLog[] namedLogs = benchmark_svc.get_logs();
 		
-		rtc.get_owned_contexts()[0].stop();
+		//rtc.get_owned_contexts()[0].stop();
 		
-		model.setResult(new BenchmarkResultItem(resultH.value, platformInfoH.value));
+		model.setResult(new BenchmarkResultItem(namedLogs[0], pinfo));
 		
 		rtsViewer.refresh();
 	}
