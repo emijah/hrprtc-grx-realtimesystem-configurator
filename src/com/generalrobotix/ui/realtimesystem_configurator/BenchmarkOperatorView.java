@@ -1,5 +1,9 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.util.Iterator;
 import java.util.List;
@@ -22,6 +26,7 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
@@ -54,9 +59,31 @@ public class BenchmarkOperatorView extends ViewPart {
 	private int robotPort_ = 2809;
 	private RTSystemItem currentSystem;
 	private TreeViewer rtsViewer;
+	private Button chkAutoUpdate;
 	private static final DecimalFormat FORMAT_MSEC = new DecimalFormat(" 0.000;-0.000");
 
 	public BenchmarkOperatorView() {
+	}
+
+	public class UpdateLogThread implements Runnable {
+		public void run() {
+			try {
+				updateLog();
+				Display display = Display.getCurrent();
+				if ( !display.isDisposed() && chkAutoUpdate.getSelection() ) {
+					display.timerExec(1000, this);
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+
+		class UpdateThread implements Runnable {
+			public void run() {
+				System.out.println("test");
+				updateLog();
+			}
+		}
 	}
 
 	@Override
@@ -66,26 +93,41 @@ public class BenchmarkOperatorView extends ViewPart {
 		text.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		rtsViewer = setupTreeViewer(parent);
 		
-		Button btn = new Button(parent, SWT.NONE);
-		btn.setText("BenchmarkTest");
-		btn.addSelectionListener(new SelectionListener() {
+		Button btnSetup = new Button(parent, SWT.NONE);
+		btnSetup.setText("Startup System");
+		btnSetup.addSelectionListener(new SelectionListener() {
+			public void widgetDefaultSelected(SelectionEvent e) {}
+
+			public void widgetSelected(SelectionEvent e) {
+				execPython("startup.py");
+			}	
+		});
+		
+		final Button btnUpdate = new Button(parent, SWT.NONE);
+		btnUpdate.setText("Update Log");
+		btnUpdate.addSelectionListener(new SelectionListener() {
+			public void widgetDefaultSelected(SelectionEvent e) {}
+
+			public void widgetSelected(SelectionEvent e) {
+				updateLog();
+			}	
+		});
+		
+	    chkAutoUpdate = new Button(parent, SWT.CHECK);
+	    chkAutoUpdate.setText("auto");
+		chkAutoUpdate.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {
 			}
 
 			public void widgetSelected(SelectionEvent e) {
-				try{
-					if ( currentSystem != null ) {
-						Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
-						while ( it.hasNext() ) {
-							RTComponentItem model = it.next();
-							String compositeType = model.getComponent().getCompositeType();
-							if ( !compositeType.equals("PeriodicECShared") && !compositeType.equals("PeriodicStateShared") ) {
-								benchmarkTest(model);
-							}
-						}
+				if ( ((Button)e.getSource()).getSelection() ) {
+					btnUpdate.setEnabled(false);
+					Display display = Display.getCurrent();
+					if ( !display.isDisposed() ) {
+						display.timerExec(1000, new UpdateLogThread());
 					}
-				} catch (Exception ex) {
-					ex.printStackTrace();
+				} else {
+					btnUpdate.setEnabled(true);
 				}
 			}	
 		});
@@ -195,6 +237,23 @@ public class BenchmarkOperatorView extends ViewPart {
 		column.setText(text);
 	}
 	
+	private void updateLog() {
+		try{
+			if ( currentSystem != null ) {
+				Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
+				while ( it.hasNext() ) {
+					RTComponentItem model = it.next();
+					String compositeType = model.getComponent().getCompositeType();
+					if ( !compositeType.equals("PeriodicECShared") && !compositeType.equals("PeriodicStateShared") ) {
+						benchmarkTest(model);
+					}
+				}
+			}
+		} catch (Exception ex) {
+			ex.printStackTrace();
+		}
+	}
+	
 	private void benchmarkTest(RTComponentItem model) {
 		String hostName = model.getHostName();
 		String rtcName = model.getName();
@@ -220,10 +279,8 @@ public class BenchmarkOperatorView extends ViewPart {
 		
 		PlatformInfo pinfo = benchmark_svc.get_platform_info();
 		
-		rtc.get_owned_contexts()[0].start();
-		
+		//rtc.get_owned_contexts()[0].start();
 		NamedStateLog[] namedLogs = benchmark_svc.get_logs();
-		
 		//rtc.get_owned_contexts()[0].stop();
 		
 		model.setResult(new BenchmarkResultItem(namedLogs[0], pinfo));
@@ -232,7 +289,19 @@ public class BenchmarkOperatorView extends ViewPart {
 	}
 	
 	private void execPython(String fname) {
-		IProject proj = getProject("RealtimeSystemConfigurator");
+		//IProject proj = getProject("RealtimeSystemConfigurator");
+		try {
+			Process p = Runtime.getRuntime().exec("python " + fname);
+			BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
+			//BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+			PrintStream ps = new PrintStream(p.getOutputStream());
+			do {
+				System.out.println(stdout.readLine());
+			} while ( stdout.ready() );
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 	}
 	
 	public IProject getProject(String projectName) {

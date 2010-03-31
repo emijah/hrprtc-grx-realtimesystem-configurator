@@ -122,20 +122,24 @@ public class BenchmarkResultExplorer extends ViewPart {
 	
 	private IProject getProject(String projectName) {
 		IProject ret = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
-		if ( !ret.exists() ) {
-			try {
-				ret.create(null);
-				ret.open(progress);
-			} catch (CoreException e) {
-				e.printStackTrace();
+		try {
+			if ( !ret.exists() ) {
+				ret.create(progress);
+				System.out.println(projectName +" is created.");
 			}
+			if ( ret.isOpen() ) {
+				ret.open(progress);
+				System.out.println(projectName +" is opened.");
+			}
+		} catch (CoreException e) {
+			e.printStackTrace();
 		}
 		return ret;
 	}
 
 	private void updateList() {
 		File[] files = project.getLocation().toFile().listFiles();
-		for (int i=0; i<files.length; i++) {
+		for (int i=0; files != null && i<files.length; i++) {
 			if ( files[i].isDirectory() ) {
 				File[] systemprofiles = files[i].listFiles(new FilenameFilter(){
 					public boolean accept(File file, String name) {
@@ -333,6 +337,10 @@ public class BenchmarkResultExplorer extends ViewPart {
 					destFolder.create(true, true, progress);
 				}
 				IPath destPath = destFolder.getFile(srcFile.getName()).getLocation();
+				IFile destFile = project.getFile(destPath);
+				if ( !destFile.exists() ) {
+					destFile.create(null, true, progress);
+				}
 
 				FileChannel srcChannel  = new FileInputStream(srcFile.getAbsolutePath()).getChannel();
 				FileChannel destChannel = new FileOutputStream(destPath.toString()).getChannel();
