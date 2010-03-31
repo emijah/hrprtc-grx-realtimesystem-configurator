@@ -36,4 +36,3 @@ Require-Bundle: org.eclipse.ui,
  jp.go.aist.rtm.systemeditor,
  jp.go.aist.rtm.toolscommon,
  jp.go.aist.rtm.toolscommon.profiles
-Eclipse-LazyStart: true
