@@ -148,6 +148,8 @@ public class BenchmarkResultItem extends TreeModelItem {
 		min = 0;
 		mean = 0;
 		stddev = 0;
+		lastT1 = null;
+		lastT2 = null;
 		updateProperties();
 	}
 	
