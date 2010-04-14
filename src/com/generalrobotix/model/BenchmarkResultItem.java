@@ -1,5 +1,6 @@
 package com.generalrobotix.model;
 
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 
@@ -15,11 +16,13 @@ public class BenchmarkResultItem extends TreeModelItem {
 	private static final String PROPERTY_MEAN_DURATION = "Ave. duration";
 	
 	public Date date;
-	public int count;    
-	public double max;
-	public double min;
-	public double mean;
-	public double stddev;
+	public int count = 0;    
+	public double max = 0;
+	public double min = 0;
+	public double mean = 0;
+	public double stddev = 0;
+	public double cycle = 0;
+	public TimedState lastTime = null;
 
 	public String cpuType;
 	public int cpuNum;
@@ -30,66 +33,23 @@ public class BenchmarkResultItem extends TreeModelItem {
 	public String kernelName; 
 	public String kernelRelease; 
 	public String extraData;
-	
 
-	public BenchmarkResultItem(NamedStateLog namedLog, PlatformInfo value2) {
-		TimedState[] log = namedLog.log;
-		System.out.println("id:"+namedLog.id);
-		count = 0;
-		mean = 0;
-		max = 0;
-		min = 10000;
-		for (int i=0; i<log.length; i++) {
-			int pos = i + namedLog.endPoint + 1;
-			pos = ( pos >= log.length ) ? i : pos;
-			if ( pos+1 >= log.length ) {
-				break;
-			}
-				
-			if ( log[pos].data == 1 && log[pos+1].data == 2) {
-				count ++;
-				i++;
-				double diff = (log[pos+1].tm.sec - log[pos].tm.sec) + (log[pos+1].tm.nsec - log[pos].tm.nsec)*10e-9;
-				max = Math.max(max, diff);
-				min = Math.min(min, diff);
-				mean += diff;
-			}
-		}
-		mean /= (double)count;
-		
-		stddev = 0;
-		for ( int i = 1; i < count; i++ ) {
-			int pos = i + namedLog.endPoint + 1;
-			pos = ( pos >= log.length ) ? i : pos;
-			if ( pos+1 >= log.length ) {
-				break;
-			}
-			if ( log[pos].data == 1 && log[pos+1].data == 2) {
-				count ++;
-				i++;
-				stddev += Math.pow(((log[pos+1].tm.sec - log[pos].tm.sec) + (log[pos+1].tm.nsec - log[pos].tm.nsec)*10e-9)-mean, 2);
-			}
-	    }
-		// Change to ( n - 1 ) to n if you have complete data instead of a sample.
-		stddev = Math.sqrt( stddev / count );
-
-		date   = new Date();
-		cpuType = value2.cpuType;
-		cpuNum = value2.cpuNum;
-		cpuFrequency = value2.cpuFrequency;
-		cpuAffinity = value2.cpuAffinity;
-		osName = value2.osName;
-		osRelease = value2.osRelease;
-		kernelName = value2.kernelName;
-		kernelRelease = value2.kernelRelease;
-		extraData = value2.extraData;
+	public BenchmarkResultItem() 
+	{
+		reset();
 		updateProperties();
 	}
-
-	public BenchmarkResultItem() {
+	
+	public BenchmarkResultItem(NamedStateLog namedLog, PlatformInfo pinfo, double cycle) 
+	{
+		setCycle(cycle);
+		updateLog(namedLog);
+		updatePlatformInfo(pinfo);
+		updateProperties();
 	}
 	
-	public BenchmarkResultItem(Map<Object, Object> properties) {
+	public BenchmarkResultItem(Map<Object, Object> properties) 
+	{
 		count = Integer.parseInt(properties.get(PROPERTY_DATACOUNT).toString());
 		max = Double.parseDouble(properties.get(PROPERTY_MAX_DURATION).toString());
 		min = Double.parseDouble(properties.get(PROPERTY_MIN_DURATION).toString());
@@ -105,26 +65,59 @@ public class BenchmarkResultItem extends TreeModelItem {
 		}
 		updateProperties();
 	}
-
-	public void reset() {
-		count = 0;
-		date = null;
-		max = 0;
-		min = 0;
-		mean = 0;
-		stddev = 0;
-		updateProperties();
+	
+	public void setCycle(double cycle) 
+	{
+		this.cycle = cycle;
 	}
 	
-	public void plus(BenchmarkResultItem result) {
-		date = result.date;
-		max  += result.max;
-		min  += result.min;
-		mean += result.mean;
-		updateProperties();
+	public void updateLog(NamedStateLog namedLog)
+	{
+		TimedState[] log = namedLog.log;
+		stddev = Math.pow(stddev, 2);
+		for (int i=0; i<log.length; i++) {
+			int pos1 = i + namedLog.endPoint + 1;
+			if ( pos1 > log.length-1 ) {
+				pos1 -= log.length;
+			}
+			int pos2 = ( pos1 == log.length-1 ) ? 0:pos1+1;
+			
+			if ( log[pos1].data == 1 && log[pos2].data == 2) {
+				double diff = (log[pos2].tm.sec - log[pos1].tm.sec) + (log[pos2].tm.nsec - log[pos1].tm.nsec)*10e-9;
+				if ( diff < 0 || (lastTime != null && log[pos2].tm.sec <= lastTime.tm.sec && log[pos2].tm.sec <= lastTime.tm.sec) ) {
+					continue;
+				}
+				max = Math.max(max, diff);
+				min = Math.min(min, diff);
+				mean = (mean*count + diff)/(count + 1);
+				stddev = (stddev*count + Math.pow(diff-mean, 2))/(count + 1);
+				count ++;
+				i++;
+			}
+			if ( max < 0 || cycle < max || min < 0) {
+				System.out.println(cycle + ":" +max +":" + min + ":" +pos1+":"+pos2+":"+namedLog.endPoint+":"+i );
+			}
+		}
+		lastTime = log[namedLog.endPoint];
+		stddev = Math.sqrt(stddev);
+		date   = new Date();
 	}
 	
-	private void updateProperties() {
+	public void updatePlatformInfo(PlatformInfo pInfo)
+	{
+		cpuType = pInfo.cpuType;
+		cpuNum = pInfo.cpuNum;
+		cpuFrequency = pInfo.cpuFrequency;
+		cpuAffinity = pInfo.cpuAffinity;
+		osName = pInfo.osName;
+		osRelease = pInfo.osRelease;
+		kernelName = pInfo.kernelName;
+		kernelRelease = pInfo.kernelRelease;
+		extraData = pInfo.extraData;
+	}
+	
+	private void updateProperties()
+	{
 		setPropertyValue(PROPERTY_DATACOUNT, String.valueOf(count));
 		setPropertyValue(PROPERTY_MAX_DURATION, String.valueOf(max));
 		setPropertyValue(PROPERTY_MIN_DURATION, String.valueOf(min));
@@ -142,5 +135,32 @@ public class BenchmarkResultItem extends TreeModelItem {
 		kernelName = value2.kernelName;
 		kernelRelease = value2.kernelRelease;
 		extraData = value2.extraData;*/
+	}
+
+	public void reset()
+	{
+		count = 0;
+		date = null;
+		max = 0;
+		min = 0;
+		mean = 0;
+		stddev = 0;
+		updateProperties();
+	}
+	
+	public void plus(BenchmarkResultItem result)
+	{
+		if ( count < result.count ) {
+			count = result.count;
+		}
+
+		if ( result.date != null && ( date == null || result.date.after(date)) ) {
+			date = result.date;
+		}
+		date = result.date;
+		max  += result.max;
+		min  += result.min;
+		mean += result.mean;
+		updateProperties();
 	}
 }
