@@ -6,14 +6,16 @@ import java.util.Map;
 
 import org.openrtp.namespaces.rts.version02.Component;
 
-public class RTComponentItem extends TreeModelItem {
+public class RTComponentItem extends TreeModelItem
+{
 	private Component component;
 	private RTSystemItem rtsystem;
 	private BenchmarkResultItem result;
 	private Map<String, BenchmarkResultItem> resultMap = new HashMap<String, BenchmarkResultItem>();
 	private static final String ICON_PATH = "icons/Component.png";
 	
-    public RTComponentItem(RTSystemItem rtsystem, Component comp) {
+    public RTComponentItem(RTSystemItem rtsystem, Component comp)
+    {
     	setRoot(rtsystem.getRoot());
     	setName(comp.getInstanceName());
     	this.rtsystem = rtsystem;
@@ -22,26 +24,26 @@ public class RTComponentItem extends TreeModelItem {
     	setIconPath(ICON_PATH);
     }
 
-	public BenchmarkResultItem getResult() {
+	public BenchmarkResultItem getResult()
+	{
 		if ( result == null ) {
 			result = new BenchmarkResultItem();
 		}
 		return result;
 	}
 	
-	public void setResult(BenchmarkResultItem result) {
+	public void setResult(BenchmarkResultItem result) 
+	{
 		this.result = result;
-		TreeModelItem item = getParent();
-		if ( item instanceof RTComponentItem ) {
-			((RTComponentItem)item).updateResult();
-		}
 	}
 	
-	public void setResult(Map<Object, Object> properties) {
+	public void setResult(Map<Object, Object> properties) 
+	{
 		this.result = new BenchmarkResultItem(properties);
 	}
 	
-	private void updateResult() {
+	public void calcSummation() 
+	{
 		getResult().reset();
 		Iterator<TreeModelItem> it = getChildren().iterator();
 		while ( it.hasNext() ) {
@@ -52,15 +54,17 @@ public class RTComponentItem extends TreeModelItem {
 		}
 		TreeModelItem item = getParent();
 		if ( item instanceof RTComponentItem ) {
-			((RTComponentItem)item).updateResult();
+			((RTComponentItem)item).calcSummation();
 		}
 	}
 	
-	public Component getComponent() {
+	public Component getComponent() 
+	{
 		return component;
 	}
 	
-	static public class RTCConnection {
+	static public class RTCConnection 
+	{
 		public RTCConnection(RTComponentItem source, RTComponentItem target) {
 			this.source = source;
 			this.target = target;
@@ -73,7 +77,8 @@ public class RTComponentItem extends TreeModelItem {
 		}
 	}
 	
-	public RTComponentItem findRTC(String id, String instanceName) {
+	public RTComponentItem findRTC(String id, String instanceName)
+	{
 		if ( component != null && component.getId().equals(id) && component.getInstanceName().equals(instanceName) ) {
 			return this;
 		}
@@ -90,15 +95,18 @@ public class RTComponentItem extends TreeModelItem {
 		return null;
 	}
 	
-	public String getHostName() {
+	public String getHostName()
+	{
 		return component.getPathUri().split("/")[0];
 	}
 	
-	public RTSystemItem getRTSystem() {
+	public RTSystemItem getRTSystem()
+	{
 		return rtsystem;
 	}
 
-	public String getId() {
+	public String getId()
+	{
 		return component.getId();
 	}
 }
