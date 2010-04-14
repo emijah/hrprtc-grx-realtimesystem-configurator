@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.eclipse.jface.action.Action;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.swt.SWT;
@@ -23,6 +24,8 @@ import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.experimental.chart.swt.ChartComposite;
 
+import RTC.TimedState;
+
 import com.generalrobotix.model.ExecutionContextItem;
 import com.generalrobotix.model.RTComponentItem;
 import com.generalrobotix.model.TreeModelItem;
@@ -31,7 +34,14 @@ public class TimingChartView extends ViewPart {
 	private List<ChartComposite> chartList = new ArrayList<ChartComposite>();
 	private Composite parent;
 	private static final int INITIAL_CHART_NUM = 3;
-	private final static String XAXIS_LABEL = "Time[msec]";
+	private static final String XAXIS_LABEL = "Time[msec]";
+	private static final int SHOW_NORMAL = 0;
+	private static final int SHOW_WORST = 1;
+	private static final int SHOW_AVERAGE = 2;
+	private static final String[] SHOW_MODE_LABELS = new String[]{"normal", "worst", "mean"};
+	private int showMode = SHOW_NORMAL;
+	private Action action1;
+	
 	public TimingChartView() {
 	}
 	
@@ -63,6 +73,23 @@ public class TimingChartView extends ViewPart {
 				}
 			}
 		});
+		
+		action1 = new Action(SHOW_MODE_LABELS[2], Action.AS_PUSH_BUTTON) {
+			public void run() {
+				changeShowMode();
+				action1.setText(SHOW_MODE_LABELS[showMode]);
+			}
+		};
+		action1.setText(SHOW_MODE_LABELS[showMode]);
+		getViewSite().getActionBars().getToolBarManager().add(action1);
+	}
+	
+	private void changeShowMode() 
+	{
+		showMode ++;
+		if ( showMode >= SHOW_MODE_LABELS.length) {
+			showMode = 0;
+		}
 	}
 	
 	private void updateChart(ExecutionContextItem item, int index, boolean isSelected) {
@@ -92,16 +119,55 @@ public class TimingChartView extends ViewPart {
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
 		chart.setTitle("EC : "+item.getName());
 		XYSeriesCollection dataset = createDataSet(chart, 1.0/item.getRate()*1000.0);
-		double t1 = 0;
 		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
-		while ( rtcs.hasNext() ) {
-			RTComponentItem rtc = (RTComponentItem)rtcs.next();
-			double t2 = rtc.getResult().max*1000.0;
-			XYSeries xyseries = new XYSeries(rtc.getName());
-			xyseries.add(t1, 1);
-			xyseries.add(t1+t2, 1);
-			t1 += t2;
-			dataset.addSeries(xyseries);
+		if ( showMode != SHOW_NORMAL ) {
+			double t1 = 0;
+			while ( rtcs.hasNext() ) {
+				RTComponentItem rtc = (RTComponentItem)rtcs.next();
+				double t2 = 0;
+				if ( showMode == SHOW_WORST ) {
+					t2 = rtc.getResult().max*1000.0;
+				} else {
+					t2 = rtc.getResult().mean*1000.0;
+				}
+				
+				XYSeries xyseries = new XYSeries(rtc.getName());
+				xyseries.add(t1, 1);
+				xyseries.add(t1+t2, 1);
+				t1 += t2;
+				dataset.addSeries(xyseries);
+			}
+		} else {
+			double bias = -1;
+			while ( rtcs.hasNext() ) {
+				RTComponentItem rtc = (RTComponentItem)rtcs.next();
+				TimedState ts1 = rtc.getResult().lastT1;
+				if ( ts1 != null ) {
+					if ( bias <= 0 ) {
+						bias =  ts1.tm.sec*1000.0 + ts1.tm.nsec*1.0e-6;
+					} else {
+						bias = Math.min(bias, ts1.tm.sec*1000.0 + ts1.tm.nsec*1.0e-6);
+					}
+				}
+			}
+			double t1 = 0;
+			double t2 = 0;
+			rtcs =  item.getChildren().iterator();
+			while ( rtcs.hasNext() ) {
+				RTComponentItem rtc = (RTComponentItem)rtcs.next();
+				XYSeries xyseries = new XYSeries(rtc.getName());
+				TimedState ts1 = rtc.getResult().lastT1;
+				if ( ts1 != null ) {
+					t1 = ts1.tm.sec*1000.0 + ts1.tm.nsec*1.0e-6 - bias;
+				}
+				TimedState ts2 = rtc.getResult().lastT2;
+				if ( ts2 != null ) {
+					t2 = ts2.tm.sec*1000.0 + ts2.tm.nsec*1.0e-6 - bias;
+				}
+				xyseries.add(t1, 1);
+				xyseries.add(t2, 1);
+				dataset.addSeries(xyseries);
+			}
 		}
 	}
 	

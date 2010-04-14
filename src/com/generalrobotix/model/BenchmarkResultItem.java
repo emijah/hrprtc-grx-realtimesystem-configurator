@@ -1,6 +1,5 @@
 package com.generalrobotix.model;
 
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 
@@ -22,7 +21,8 @@ public class BenchmarkResultItem extends TreeModelItem {
 	public double mean = 0;
 	public double stddev = 0;
 	public double cycle = 0;
-	public TimedState lastTime = null;
+	public TimedState lastT1 = null;
+	public TimedState lastT2 = null;
 
 	public String cpuType;
 	public int cpuNum;
@@ -74,6 +74,7 @@ public class BenchmarkResultItem extends TreeModelItem {
 	public void updateLog(NamedStateLog namedLog)
 	{
 		TimedState[] log = namedLog.log;
+		int lastPos = 0;
 		stddev = Math.pow(stddev, 2);
 		for (int i=0; i<log.length; i++) {
 			int pos1 = i + namedLog.endPoint + 1;
@@ -84,7 +85,7 @@ public class BenchmarkResultItem extends TreeModelItem {
 			
 			if ( log[pos1].data == 1 && log[pos2].data == 2) {
 				double diff = (log[pos2].tm.sec - log[pos1].tm.sec) + (log[pos2].tm.nsec - log[pos1].tm.nsec)*10e-9;
-				if ( diff < 0 || (lastTime != null && log[pos2].tm.sec <= lastTime.tm.sec && log[pos2].tm.sec <= lastTime.tm.sec) ) {
+				if ( diff < 0 || (lastT1 != null && log[pos1].tm.sec <= lastT1.tm.sec && log[pos1].tm.sec <= lastT1.tm.sec) ) {
 					continue;
 				}
 				max = Math.max(max, diff);
@@ -93,14 +94,16 @@ public class BenchmarkResultItem extends TreeModelItem {
 				stddev = (stddev*count + Math.pow(diff-mean, 2))/(count + 1);
 				count ++;
 				i++;
+				lastPos = pos1;
 			}
 			if ( max < 0 || cycle < max || min < 0) {
 				System.out.println(cycle + ":" +max +":" + min + ":" +pos1+":"+pos2+":"+namedLog.endPoint+":"+i );
 			}
 		}
-		lastTime = log[namedLog.endPoint];
 		stddev = Math.sqrt(stddev);
 		date   = new Date();
+		lastT1 = log[lastPos];
+		lastT2 = log[lastPos+1];
 	}
 	
 	public void updatePlatformInfo(PlatformInfo pInfo)
@@ -157,7 +160,6 @@ public class BenchmarkResultItem extends TreeModelItem {
 		if ( result.date != null && ( date == null || result.date.after(date)) ) {
 			date = result.date;
 		}
-		date = result.date;
 		max  += result.max;
 		min  += result.min;
 		mean += result.mean;

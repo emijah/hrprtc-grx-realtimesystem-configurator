@@ -6,12 +6,14 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITableLabelProvider;
@@ -35,6 +37,7 @@ import org.eclipse.swt.widgets.TreeColumn;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.omg.CosNaming.NamingContext;
 import org.openrtp.namespaces.rts.version02.Component;
 import org.openrtp.namespaces.rts.version02.ExecutionContext;
@@ -42,10 +45,7 @@ import org.openrtp.namespaces.rts.version02.ExecutionContext;
 import OpenRTM.BenchmarkService;
 import OpenRTM.BenchmarkServiceHelper;
 import OpenRTM.NamedStateLog;
-import OpenRTM.PlatformInfo;
-import OpenRTM.PlatformInfoHolder;
 import RTC.RTObject;
-
 import _SDOPackage.InternalError;
 import _SDOPackage.InvalidParameter;
 import _SDOPackage.NotAvailable;
@@ -58,7 +58,6 @@ import com.generalrobotix.model.TreeModelItem;
 import com.generalrobotix.ui.util.GrxRTMUtil;
 
 public class BenchmarkOperatorView extends ViewPart {
-	private String robotHost_ = "localhost";
 	private int robotPort_ = 2809;
 	private RTSystemItem currentSystem;
 	private TreeViewer rtsViewer;
@@ -186,16 +185,14 @@ public class BenchmarkOperatorView extends ViewPart {
 				RTComponentItem model = (RTComponentItem)obj;
 				BenchmarkResultItem result = model.getResult();
 				Component comp = model.getComponent();
-				//if ( comp.getCompositeType().equals("PeriodicECShared") || comp.getCompositeType().equals("PeriodicStateShared") )
 				List<ExecutionContext> eclist = comp.getExecutionContexts();
 				switch(index) {
 				case 0: return eclist.size() > 0 ? (model.getName() + ":" + eclist.get(0).getId()) : (model.getName());
 				case 1: return eclist.size() > 0 ? (String.valueOf((int)(1.0/eclist.get(0).getRate()*1000))) : ("");
 				case 2: return FORMAT_MSEC.format(result.max*1000.0);
-				case 3: return FORMAT_MSEC.format(result.min*1000.0);
-				case 4: return FORMAT_MSEC.format(result.mean*1000.0);
-				case 5: return String.valueOf(result.count);
-				case 6: return result.date == null ? "-":FORMAT_DATE1.format(result.date);
+				case 3: return FORMAT_MSEC.format(result.mean*1000.0);
+				case 4: return String.valueOf(result.count);
+				case 5: return result.date == null ? "-":FORMAT_DATE1.format(result.date);
 				default: break;
 				}
 			} catch (Exception e) {
@@ -203,12 +200,50 @@ public class BenchmarkOperatorView extends ViewPart {
 			}
 			return "";
 		}
-		public Image getColumnImage(Object obj, int index) {
+		/*public Image getColumnImage(Object obj, int index) {
 			return getImage(obj);
 		}
 		public Image getImage(Object obj) {
 			return null;//PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_OBJ_ELEMENT);
+		}*/
+		public Image getColumnImage(Object obj, int index) {
+			if ( index == 0 ) {
+				return getImage(obj);
+			}
+			return null;
 		}
+		
+	    public Image getImage(Object element) {
+	        if (element instanceof TreeModelItem) {
+	            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), ((TreeModelItem)element).getIconPath());
+	            return cacheImage(desc);
+	        }
+	        return null;
+	    }
+	    
+	    private HashMap<ImageDescriptor, Image> imageMap;
+		Image cacheImage(ImageDescriptor desc) {
+			if ( imageMap == null ) {
+				imageMap = new HashMap<ImageDescriptor, Image>();
+			}
+	        Image image = (Image) imageMap.get(desc);
+	        if (image == null) {
+	            image = desc.createImage();
+	            imageMap.put(desc, image);
+	        }
+	        return image;
+	    }
+
+	    public void dispose() {
+	        if (imageMap != null) {
+	        	Iterator<Image> images = imageMap.values().iterator();
+	            while (images.hasNext()) {
+	                images.next().dispose();
+	            }
+	            imageMap = null;
+	        }
+	        super.dispose();
+	    }
 	}
 	
 	private TreeViewer setupTreeViewer(Composite parent)
@@ -224,7 +259,6 @@ public class BenchmarkOperatorView extends ViewPart {
 		setHeader(tree, SWT.LEFT, idx++, 180, "Name");
 		setHeader(tree, SWT.LEFT, idx++,  50, "T[ms]");
 		setHeader(tree, SWT.LEFT, idx++,  80, "Max.[ms]");
-		setHeader(tree, SWT.LEFT, idx++,  80, "Min.[ms]");
 		setHeader(tree, SWT.LEFT, idx++,  80, "Ave.[ms]");
 		setHeader(tree, SWT.LEFT, idx++,  80, "Num.");
 		setHeader(tree, SWT.LEFT, idx++,  80, "LastUpdate");
@@ -244,32 +278,39 @@ public class BenchmarkOperatorView extends ViewPart {
 			Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
 			while ( it.hasNext() ) {
 				RTComponentItem model = it.next();
-				if ( !(model instanceof ExecutionContextItem) ) {
-					benchmarkTest(model);
+				if ( model instanceof ExecutionContextItem ) {
+					benchmarkTest((ExecutionContextItem)model);
 				}
 			}
 		}
 	}
 	
-	private void benchmarkTest(RTComponentItem model)
+	private void benchmarkTest(ExecutionContextItem ecModel)
 	{
 		try {
-			String hostName = model.getHostName();
-			String rtcName  = model.getName();
-			NamingContext rnc = GrxRTMUtil.getRootNamingContext(hostName, robotPort_);
-			RTObject rtc = GrxRTMUtil.findRTC(rtcName, rnc);
-
-			BenchmarkService benchmark_svc = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
-			PlatformInfo pinfo = benchmark_svc.get_platform_info();
-			model.getResult().updatePlatformInfo(pinfo);
-			model.getResult().setCycle(1.0/model.getComponent().getExecutionContexts().get(0).getRate());
+			double cycle = 1.0/ecModel.getRate();
+			NamingContext rnc = GrxRTMUtil.getRootNamingContext(ecModel.getHostName(), robotPort_);
 			
-			NamedStateLog[] namedLogs = benchmark_svc.get_logs();
-			model.getResult().updateLog(namedLogs[0]);
+			RTObject rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
+			BenchmarkService bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
+			NamedStateLog[] logs = bmSVC.get_logs();
 
-			TreeModelItem item = model.getParent();
-			if ( item instanceof RTComponentItem ) {
-				((RTComponentItem)item).calcSummation();
+			Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
+			while ( it.hasNext() ) {
+				RTComponentItem model = (RTComponentItem)it.next();
+				model.getResult().setCycle(cycle);
+				model.getResult().updatePlatformInfo(bmSVC.get_platform_info());
+				for (int i=0; i<logs.length; i++) {
+					if ( logs[i].id.equals(model.getName()) ) {
+						model.getResult().updateLog(logs[i]);
+						break;
+					}
+				}
+
+				TreeModelItem item = model.getParent();
+				if ( item instanceof RTComponentItem ) {
+					((RTComponentItem)item).calcSummation();
+				}
 			}
 		} catch (InvalidParameter e) {
 			e.printStackTrace();
@@ -278,7 +319,7 @@ public class BenchmarkOperatorView extends ViewPart {
 		} catch (InternalError e) {
 			e.printStackTrace();
 		} catch (Exception e) {
-			System.out.println("RTC:" + model.getName() + " is not available.");
+			System.out.println("EC:" + ecModel.getName() + " is not available.");
 		}
 	}
 	
