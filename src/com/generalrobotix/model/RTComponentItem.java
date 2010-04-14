@@ -1,6 +1,5 @@
 package com.generalrobotix.model;
 
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
@@ -11,7 +10,6 @@ public class RTComponentItem extends TreeModelItem
 	private Component component;
 	private RTSystemItem rtsystem;
 	private BenchmarkResultItem result;
-	private Map<String, BenchmarkResultItem> resultMap = new HashMap<String, BenchmarkResultItem>();
 	private static final String ICON_PATH = "icons/Component.png";
 	
     public RTComponentItem(RTSystemItem rtsystem, Component comp)
