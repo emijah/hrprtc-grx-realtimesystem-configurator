@@ -38,7 +38,7 @@ public class TimingChartView extends ViewPart {
 	private static final int SHOW_NORMAL = 0;
 	private static final int SHOW_WORST = 1;
 	private static final int SHOW_AVERAGE = 2;
-	private static final String[] SHOW_MODE_LABELS = new String[]{"normal", "worst", "mean"};
+	private static final String[] SHOW_MODE_LABELS = new String[]{"show normal", "show worst", "show ave."};
 	private int showMode = SHOW_NORMAL;
 	private Action action1;
 	
@@ -114,7 +114,6 @@ public class TimingChartView extends ViewPart {
 			}
 			return;
 		}
-		
 		JFreeChart chart = chartList.get(index).getChart();
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
 		chart.setTitle("EC : "+item.getName());
