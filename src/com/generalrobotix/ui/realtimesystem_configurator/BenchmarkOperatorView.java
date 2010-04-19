@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -14,6 +15,7 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.resource.ImageDescriptor;
+import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITableLabelProvider;
@@ -64,9 +66,17 @@ public class BenchmarkOperatorView extends ViewPart {
 	private Button chkAutoUpdate;
 	private static final DecimalFormat FORMAT_MSEC = new DecimalFormat(" 0.000;-0.000");
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+	private Text txtRobotHost_;
+	
+	ArrayList<IPropertyChangeListener> myListeners;
 
 	public BenchmarkOperatorView()
 	{
+	}
+	
+	public void addPropertyChangeListener(IPropertyChangeListener listener) {
+		if(!myListeners.contains(listener))
+			myListeners.add(listener);
 	}
 
 	@Override
@@ -108,6 +118,7 @@ public class BenchmarkOperatorView extends ViewPart {
 			public void widgetSelected(SelectionEvent e) {
 				updateLog();
 				rtsViewer.refresh();
+				TimingChartView.getInstance().updateCharts();
 			}	
 		});
 		
@@ -130,6 +141,10 @@ public class BenchmarkOperatorView extends ViewPart {
 			}	
 		});
 		
+		txtRobotHost_ = new Text(btnPanel, SWT.NONE);
+		txtRobotHost_.setSize(200, 30);
+		txtRobotHost_.setText("localhost");
+		
 		// Catch selection event from BenchmarkResultExplorer
 		getSite().getPage().addSelectionListener(new ISelectionListener() {
 	        public void selectionChanged(IWorkbenchPart sourcepart, ISelection selection) {
@@ -143,6 +158,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	            }
 	        }
 	    });
+		getSite().setSelectionProvider(rtsViewer);
 	}
 
 	@Override
@@ -289,7 +305,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	{
 		try {
 			double cycle = 1.0/ecModel.getRate();
-			NamingContext rnc = GrxRTMUtil.getRootNamingContext(ecModel.getHostName(), robotPort_);
+			NamingContext rnc = GrxRTMUtil.getRootNamingContext(txtRobotHost_.getText()/*ecModel.getHostName()*/, robotPort_);
 			
 			RTObject rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
 			BenchmarkService bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
@@ -368,13 +384,13 @@ public class BenchmarkOperatorView extends ViewPart {
 		return ret;
 	}
 	
-
 	public class UpdateLogThread implements Runnable
 	{
 		public void run() {
 			try {
 				updateLog();
 				rtsViewer.refresh();
+				TimingChartView.getInstance().updateCharts();
 				Display display = Display.getCurrent();
 				if ( !display.isDisposed() && chkAutoUpdate.getSelection() ) {
 					display.timerExec(1000, this);
