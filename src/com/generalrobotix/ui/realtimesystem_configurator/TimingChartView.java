@@ -35,14 +35,18 @@ public class TimingChartView extends ViewPart {
 	private Composite parent;
 	private static final int INITIAL_CHART_NUM = 3;
 	private static final String XAXIS_LABEL = "Time[msec]";
-	private static final int SHOW_NORMAL = 0;
-	private static final int SHOW_WORST = 1;
-	private static final int SHOW_AVERAGE = 2;
-	private static final String[] SHOW_MODE_LABELS = new String[]{"show normal", "show worst", "show ave."};
-	private int showMode = SHOW_NORMAL;
+	private static final int SHOW_WHOLE   = 0;
+	private static final int SHOW_LASTONE = 1;
+	private static final int SHOW_WORST   = 2;
+	private static final int SHOW_AVERAGE = 3;
+	private static final String[] SHOW_MODE_LABELS = new String[]{"whole data", "last one", "worst one", "average"};
+	private int showMode = SHOW_WHOLE;
 	private Action action1;
+	private static TimingChartView this_;
+	private TreeModelItem selectedItem_;
 	
 	public TimingChartView() {
+		this_ = this;
 	}
 	
 	@Override
@@ -57,18 +61,8 @@ public class TimingChartView extends ViewPart {
 				if (part != TimingChartView.this &&	 selection instanceof IStructuredSelection) {
 					List sel = ((IStructuredSelection) selection).toList();
 					if ( sel.size()>0 && sel.get(0) instanceof TreeModelItem ) {
-						TreeModelItem selectedItem = (TreeModelItem)sel.get(0);
-						TreeModelItem root = selectedItem.getRoot();
-						Iterator<TreeModelItem> checkedItems = root.getCheckedItems().iterator();
-						int index = 0;
-						while ( checkedItems.hasNext() ) {
-							TreeModelItem item = checkedItems.next();
-							if ( item instanceof ExecutionContextItem ) {
-								boolean isSelected = (item == selectedItem) || (item.getChildren().contains(selectedItem));
-								updateChart((ExecutionContextItem)item, index++, isSelected);
-							} 
-						}
-						updateChart(null, index, false);
+						selectedItem_ = (TreeModelItem)sel.get(0);
+						updateCharts();
 					}
 				}
 			}
@@ -92,11 +86,25 @@ public class TimingChartView extends ViewPart {
 		}
 	}
 	
+	synchronized public void updateCharts() {
+		TreeModelItem root = selectedItem_.getRoot();
+		Iterator<TreeModelItem> checkedItems = root.getCheckedItems().iterator();
+		int index = 0;
+		while ( checkedItems.hasNext() ) {
+			TreeModelItem item = checkedItems.next();
+			if ( item instanceof ExecutionContextItem ) {
+				boolean isSelected = (item == selectedItem_) || (item.getChildren().contains(selectedItem_));
+				updateChart((ExecutionContextItem)item, index++, isSelected);
+			}
+		}
+		updateChart(null, index, false);
+	}
+	
 	private void updateChart(ExecutionContextItem item, int index, boolean isSelected) {
 		while ( chartList.size() < index + 1 || chartList.size() < INITIAL_CHART_NUM ) {
 			chartList.add(createChart(parent));
 		}
-	
+
 		if ( item == null ) {
 			for (int i=chartList.size()-1; i >= index; i--) {
 				ChartComposite comp = chartList.get(i);
@@ -114,29 +122,38 @@ public class TimingChartView extends ViewPart {
 			}
 			return;
 		}
+
 		JFreeChart chart = chartList.get(index).getChart();
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
 		chart.setTitle("EC : "+item.getName());
 		XYSeriesCollection dataset = createDataSet(chart, 1.0/item.getRate()*1000.0);
 		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
-		if ( showMode != SHOW_NORMAL ) {
-			double t1 = 0;
+		if ( showMode == SHOW_WHOLE ) {
+			double bias = -1;
 			while ( rtcs.hasNext() ) {
 				RTComponentItem rtc = (RTComponentItem)rtcs.next();
-				double t2 = 0;
-				if ( showMode == SHOW_WORST ) {
-					t2 = rtc.getResult().max*1000.0;
+				List<Double> log = rtc.getResult().lastLog;
+				if ( bias <= 0 ) {
+					bias =  log.get(0);
 				} else {
-					t2 = rtc.getResult().mean*1000.0;
+					bias = Math.min(bias, log.get(0));
 				}
-				
+			}
+			rtcs =  item.getChildren().iterator();
+			while ( rtcs.hasNext() ) {
+				RTComponentItem rtc = (RTComponentItem)rtcs.next();
 				XYSeries xyseries = new XYSeries(rtc.getName());
-				xyseries.add(t1, 1);
-				xyseries.add(t1+t2, 1);
-				t1 += t2;
+				List<Double> log = rtc.getResult().lastLog;
+				for (int i=0; i<log.size(); i+=2) {
+					double t1 = log.get(i) - bias;
+					double t2 = t1 + log.get(i+1);
+					xyseries.add(t1*1000.0, 1);
+					xyseries.add(t2*1000.0, 1);
+					xyseries.add((t2+0.0000001)*1000.0, 0);
+				}
 				dataset.addSeries(xyseries);
 			}
-		} else {
+		} else if ( showMode == SHOW_LASTONE ) {
 			double bias = -1;
 			while ( rtcs.hasNext() ) {
 				RTComponentItem rtc = (RTComponentItem)rtcs.next();
@@ -149,6 +166,7 @@ public class TimingChartView extends ViewPart {
 					}
 				}
 			}
+
 			double t1 = 0;
 			double t2 = 0;
 			rtcs =  item.getChildren().iterator();
@@ -167,7 +185,25 @@ public class TimingChartView extends ViewPart {
 				xyseries.add(t2, 1);
 				dataset.addSeries(xyseries);
 			}
+		} else {
+			double t1 = 0;
+			while ( rtcs.hasNext() ) {
+				RTComponentItem rtc = (RTComponentItem)rtcs.next();
+				double t2 = 0;
+				if ( showMode == SHOW_WORST ) {
+					t2 = rtc.getResult().max*1000.0;
+				} else {
+					t2 = rtc.getResult().mean*1000.0;
+				}
+				
+				XYSeries xyseries = new XYSeries(rtc.getName());
+				xyseries.add(t1, 1);
+				xyseries.add(t1+t2, 1);
+				t1 += t2;
+				dataset.addSeries(xyseries);
+			}
 		}
+		parent.update();
 	}
 	
 	public XYSeriesCollection createDataSet(JFreeChart chart, double cycle) {
@@ -205,5 +241,9 @@ public class TimingChartView extends ViewPart {
 
 	@Override
 	public void setFocus() {
+	}
+	
+	public static TimingChartView getInstance() {
+		return this_; // TODO update chart without this method
 	}
 }

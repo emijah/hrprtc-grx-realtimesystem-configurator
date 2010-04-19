@@ -1,6 +1,8 @@
 package com.generalrobotix.model;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 import OpenRTM.NamedStateLog;
@@ -21,8 +23,9 @@ public class BenchmarkResultItem extends TreeModelItem {
 	public double mean = 0;
 	public double stddev = 0;
 	public double cycle = 0;
-	public TimedState lastT1 = null;
-	public TimedState lastT2 = null;
+	public TimedState lastT1;
+	public TimedState lastT2;
+	public List<Double> lastLog = new ArrayList<Double>();
 
 	public String cpuType;
 	public int cpuNum;
@@ -74,17 +77,18 @@ public class BenchmarkResultItem extends TreeModelItem {
 	public void updateLog(NamedStateLog namedLog)
 	{
 		TimedState[] log = namedLog.log;
+		lastLog.clear();
 		int lastPos = 0;
 		stddev = Math.pow(stddev, 2);
 		for (int i=0; i<log.length; i++) {
-			int pos1 = i + namedLog.endPoint + 1;
+			int pos1 = i + namedLog.endPoint; //+1;
 			if ( pos1 > log.length-1 ) {
 				pos1 -= log.length;
 			}
 			int pos2 = ( pos1 == log.length-1 ) ? 0:pos1+1;
 			
 			if ( log[pos1].data == 1 && log[pos2].data == 2) {
-				double diff = (log[pos2].tm.sec - log[pos1].tm.sec) + (log[pos2].tm.nsec - log[pos1].tm.nsec)*10e-9;
+				double diff = (log[pos2].tm.sec - log[pos1].tm.sec) + (log[pos2].tm.nsec - log[pos1].tm.nsec)*1.0e-9;
 				if ( diff < 0 || (lastT1 != null && log[pos1].tm.sec <= lastT1.tm.sec && log[pos1].tm.sec <= lastT1.tm.sec) ) {
 					continue;
 				}
@@ -95,9 +99,11 @@ public class BenchmarkResultItem extends TreeModelItem {
 				count ++;
 				i++;
 				lastPos = pos1;
+				lastLog.add(log[pos1].tm.sec + log[pos1].tm.nsec*1.0e-9);
+				lastLog.add(diff);
 			}
-			if ( max < 0 || cycle < max || min < 0) {
-				System.out.println(cycle + ":" +max +":" + min + ":" +pos1+":"+pos2+":"+namedLog.endPoint+":"+i );
+			if ( max < 0 || min < 0) {
+				System.out.println("dataerror: "+ cycle + ":" +max +":" + min + ":" +pos1+":"+pos2+":"+namedLog.endPoint+":"+i );
 			}
 		}
 		stddev = Math.sqrt(stddev);
