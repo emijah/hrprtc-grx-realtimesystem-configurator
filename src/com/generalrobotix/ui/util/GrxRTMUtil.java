@@ -8,6 +8,8 @@ import org.omg.CosNaming.NamingContextPackage.CannotProceed;
 import org.omg.CosNaming.NamingContextPackage.InvalidName;
 import org.omg.CosNaming.NamingContextPackage.NotFound;
 
+import com.generalrobotix.model.RTComponentItem;
+
 import _SDOPackage.NameValue;
 
 import RTC.ComponentProfile;
@@ -21,10 +23,12 @@ import RTC.RTObjectHelper;
 import RTM.Manager;
 import RTM.ManagerHelper;
 
-public class GrxRTMUtil {
+public class GrxRTMUtil 
+{
 	static ORB orb;
 	
-	private static void init() {
+	private static void init() 
+	{
 		if ( orb == null ) {
 			java.util.Properties props = System.getProperties();
 			props.put("org.omg.CORBA.ORBSingletonClass","com.ooc.CORBA.ORBSingleton");
@@ -32,20 +36,32 @@ public class GrxRTMUtil {
 		}
 	}
 	
-	public static NamingContext getRootNamingContext(String host, int port) {
+	public static NamingContext getRootNamingContext(String host, int port) 
+	{
 		init();
 		org.omg.CORBA.Object obj = orb.string_to_object("corbaloc:iiop:"+host+":"+port+"/NameService");
 		return NamingContextHelper.narrow(obj);
 	}
 	
-	public static Manager findRTCmanager(String host, int port) {
+	public static Manager findRTCmanager(String hostname, int port) 
+	{
 		init();
-		org.omg.CORBA.Object obj = orb.string_to_object("corbaloc:iiop:"+host+":"+port+"/manager");
+		org.omg.CORBA.Object obj = orb.string_to_object("corbaloc:iiop:"+hostname+":"+port+"/manager");
 		Manager manager = ManagerHelper.narrow(obj);
 		return manager;
 	}
 	
-	public static org.omg.CORBA.Object findObject(String name, String kind, NamingContext rnc) {
+	public static Manager findRTCmanager(String hostname, NamingContext rnc) 
+	{
+		init();
+		org.omg.CORBA.Object cxt = findObject(hostname, "host_cxt", rnc);
+		org.omg.CORBA.Object obj = findObject("manager", "mgr", NamingContextHelper.narrow(cxt));
+		Manager manager = ManagerHelper.narrow(obj);
+		return manager;
+	}
+	
+	public static org.omg.CORBA.Object findObject(String name, String kind, NamingContext rnc) 
+	{
 		init();
 		if ( rnc == null ) {
 			return null;
@@ -56,22 +72,28 @@ public class GrxRTMUtil {
 		try {
 			return rnc.resolve(new NameComponent[]{nc});
 		} catch (NotFound e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		} catch (CannotProceed e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		} catch (InvalidName e) {
-			e.printStackTrace();
+			//e.printStackTrace();
 		}
 		return null;
 	}
 	
-	public static RTObject findRTC(String name, NamingContext rnc) {
+	public static RTObject findRTC(String name, NamingContext rnc) 
+	{
 		init();
-		org.omg.CORBA.Object obj = findObject(name, "rtc", rnc);
-		return RTObjectHelper.narrow(obj);
+		try {
+			org.omg.CORBA.Object obj = findObject(name, "rtc", rnc);
+			return RTObjectHelper.narrow(obj);
+		} catch (Exception e) {
+			return null;
+		}
 	}
 	
-	public static org.omg.CORBA.Object findService(RTObject rtc, String svcname) {
+	public static org.omg.CORBA.Object findService(RTObject rtc, String svcname) 
+	{
 		init();
 		ComponentProfile prof= rtc.get_component_profile();
 		PortProfile[] port_prof = prof.port_profiles;
@@ -99,5 +121,15 @@ public class GrxRTMUtil {
 		port.disconnect_all();
 		String ior = con_prof_holder.value.properties[0].value.extract_string();
 		return orb.string_to_object(ior);
+	}
+	
+	public static boolean releaseObject(org.omg.CORBA.Object obj) 
+	{
+		try {
+			obj._release();
+		} catch (Exception e) {
+			return false;
+		}
+		return true;
 	}
 }

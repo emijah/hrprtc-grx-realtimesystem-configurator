@@ -4,6 +4,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -42,12 +44,17 @@ import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.omg.CosNaming.NamingContext;
 import org.openrtp.namespaces.rts.version02.Component;
+import org.openrtp.namespaces.rts.version02.Dataport;
+import org.openrtp.namespaces.rts.version02.DataportConnector;
 import org.openrtp.namespaces.rts.version02.ExecutionContext;
+import org.openrtp.namespaces.rts.version02.TargetPort;
 
 import OpenRTM.BenchmarkService;
 import OpenRTM.BenchmarkServiceHelper;
 import OpenRTM.NamedStateLog;
 import RTC.RTObject;
+import RTM.Manager;
+import RTM.ModuleProfile;
 import _SDOPackage.InternalError;
 import _SDOPackage.InvalidParameter;
 import _SDOPackage.NotAvailable;
@@ -95,7 +102,8 @@ public class BenchmarkOperatorView extends ViewPart {
 			public void widgetDefaultSelected(SelectionEvent e) {}
 
 			public void widgetSelected(SelectionEvent e) {
-				execPython("startup.py");
+				//setupRTSystem();
+				execPython(null);
 			}	
 		});
 		
@@ -158,7 +166,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	            }
 	        }
 	    });
-		getSite().setSelectionProvider(rtsViewer);
+		//getSite().setSelectionProvider(rtsViewer);
 	}
 
 	@Override
@@ -288,6 +296,54 @@ public class BenchmarkOperatorView extends ViewPart {
 		column.setText(text);
 	}
 	
+	private void setupRTSystem()
+	{
+		if ( currentSystem != null ) {
+			String hostname = null;
+			try {
+				hostname = InetAddress.getLocalHost().getHostName(); // = txtRobotHost_.getText();
+				NamingContext rnc = GrxRTMUtil.getRootNamingContext(hostname, robotPort_);
+				Manager mgr = GrxRTMUtil.findRTCmanager(hostname, rnc);
+				// Create Components
+				Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
+				while ( it.hasNext() ) {
+					RTComponentItem model = it.next();
+					if ( GrxRTMUtil.findRTC(model.getName(), rnc) == null ) {
+						createComp(model, mgr);
+					}
+				}
+				
+				// Connect Dataports
+				Iterator<DataportConnector> connectors = currentSystem.getDataPortConnectors().iterator();
+				while ( connectors.hasNext() ) {
+					DataportConnector con = connectors.next();
+					TargetPort src = con.getSourceDataPort();
+					TargetPort dst = con.getTargetDataPort();
+					RTObject srcObj = GrxRTMUtil.findRTC(src.getInstanceName(), rnc);
+					RTObject dstObj = GrxRTMUtil.findRTC(dst.getInstanceName(), rnc);
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+	
+	private void createComp(RTComponentItem model, Manager mgr)
+	{
+		try {
+			String category = model.getId().split(":")[0];
+			if ( category.equals("RTC") ) {
+				model.getName();
+				String[] s = model.getId().split(":")[1].split("[.]");
+				String loadable = s[s.length-1];
+				mgr.create_component(loadable);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			GrxRTMUtil.releaseObject(mgr);
+		}
+	}
+	
 	private void updateLog()
 	{
 		if ( currentSystem != null ) {
@@ -303,14 +359,16 @@ public class BenchmarkOperatorView extends ViewPart {
 	
 	private void benchmarkTest(ExecutionContextItem ecModel)
 	{
+		NamingContext rnc = null;
+		RTObject rtc = null;
+		BenchmarkService bmSVC = null;
 		try {
 			double cycle = 1.0/ecModel.getRate();
-			NamingContext rnc = GrxRTMUtil.getRootNamingContext(txtRobotHost_.getText()/*ecModel.getHostName()*/, robotPort_);
+			rnc = GrxRTMUtil.getRootNamingContext(txtRobotHost_.getText()/*ecModel.getHostName()*/, robotPort_);
 			
-			RTObject rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
-			BenchmarkService bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
+			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
+			bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
 			NamedStateLog[] logs = bmSVC.get_logs();
-
 			Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
 			while ( it.hasNext() ) {
 				RTComponentItem model = (RTComponentItem)it.next();
@@ -336,6 +394,10 @@ public class BenchmarkOperatorView extends ViewPart {
 			e.printStackTrace();
 		} catch (Exception e) {
 			System.out.println("EC:" + ecModel.getName() + " is not available.");
+		} finally {
+			GrxRTMUtil.releaseObject(rnc);
+			GrxRTMUtil.releaseObject(rtc);
+			GrxRTMUtil.releaseObject(bmSVC);
 		}
 	}
 	
@@ -357,9 +419,9 @@ public class BenchmarkOperatorView extends ViewPart {
 	{
 		//IProject proj = getProject("RealtimeSystemConfigurator");
 		try {
-			Process p = Runtime.getRuntime().exec("python " + fname);
+			Process p = Runtime.getRuntime().exec(new String[]{"python", "-m", "test"}, new String[]{"PYTHONPATH=/home/kawasumi/project/hrpsysRTM/src/hrpsys3/grx/REFHW/scripts"});
 			BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
-			//BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
+			BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 			PrintStream ps = new PrintStream(p.getOutputStream());
 			do {
 				System.out.println(stdout.readLine());
@@ -370,7 +432,7 @@ public class BenchmarkOperatorView extends ViewPart {
 		}
 	}
 	
-	public IProject getProject(String projectName)
+	/*public IProject getProject(String projectName)
 	{
 		IProject ret = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
 		if ( !ret.exists() ) {
@@ -382,7 +444,7 @@ public class BenchmarkOperatorView extends ViewPart {
 			}
 		}
 		return ret;
-	}
+	}*/
 	
 	public class UpdateLogThread implements Runnable
 	{
