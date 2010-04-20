@@ -36,10 +36,9 @@ public class TimingChartView extends ViewPart {
 	private static final int INITIAL_CHART_NUM = 3;
 	private static final String XAXIS_LABEL = "Time[msec]";
 	private static final int SHOW_WHOLE   = 0;
-	private static final int SHOW_LASTONE = 1;
-	private static final int SHOW_WORST   = 2;
-	private static final int SHOW_AVERAGE = 3;
-	private static final String[] SHOW_MODE_LABELS = new String[]{"whole data", "last one", "worst one", "average"};
+	private static final int SHOW_WORST   = 1;
+	private static final int SHOW_AVERAGE = 2;
+	private static final String[] SHOW_MODE_LABELS = new String[]{"whole data", "worst one", "average"};
 	private int showMode = SHOW_WHOLE;
 	private Action action1;
 	private static TimingChartView this_;
@@ -116,8 +115,7 @@ public class TimingChartView extends ViewPart {
 					chart.setBackgroundPaint(Color.white);
 					chart.setTitle("NO DATA");
 					chart.getXYPlot().getDomainAxis().setUpperBound(5.2);
-					createDataSet(chart, 0.005);
-					//chart.getXYPlot().getRenderer(0).setSeriesVisibleInLegend(0,false);
+					createIndigator(chart, "cycle", 0.005);
 				}
 			}
 			return;
@@ -126,7 +124,7 @@ public class TimingChartView extends ViewPart {
 		JFreeChart chart = chartList.get(index).getChart();
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
 		chart.setTitle("EC : "+item.getName());
-		XYSeriesCollection dataset = createDataSet(chart, 1.0/item.getRate()*1000.0);
+		XYSeriesCollection dataset = createIndigator(chart, "cycle", 1.0/item.getRate()*1000.0);
 		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
 		if ( showMode == SHOW_WHOLE ) {
 			double bias = -1;
@@ -153,38 +151,6 @@ public class TimingChartView extends ViewPart {
 				}
 				dataset.addSeries(xyseries);
 			}
-		} else if ( showMode == SHOW_LASTONE ) {
-			double bias = -1;
-			while ( rtcs.hasNext() ) {
-				RTComponentItem rtc = (RTComponentItem)rtcs.next();
-				TimedState ts1 = rtc.getResult().lastT1;
-				if ( ts1 != null ) {
-					if ( bias <= 0 ) {
-						bias =  ts1.tm.sec*1000.0 + ts1.tm.nsec*1.0e-6;
-					} else {
-						bias = Math.min(bias, ts1.tm.sec*1000.0 + ts1.tm.nsec*1.0e-6);
-					}
-				}
-			}
-
-			double t1 = 0;
-			double t2 = 0;
-			rtcs =  item.getChildren().iterator();
-			while ( rtcs.hasNext() ) {
-				RTComponentItem rtc = (RTComponentItem)rtcs.next();
-				XYSeries xyseries = new XYSeries(rtc.getName());
-				TimedState ts1 = rtc.getResult().lastT1;
-				if ( ts1 != null ) {
-					t1 = ts1.tm.sec*1000.0 + ts1.tm.nsec*1.0e-6 - bias;
-				}
-				TimedState ts2 = rtc.getResult().lastT2;
-				if ( ts2 != null ) {
-					t2 = ts2.tm.sec*1000.0 + ts2.tm.nsec*1.0e-6 - bias;
-				}
-				xyseries.add(t1, 1);
-				xyseries.add(t2, 1);
-				dataset.addSeries(xyseries);
-			}
 		} else {
 			double t1 = 0;
 			while ( rtcs.hasNext() ) {
@@ -206,9 +172,9 @@ public class TimingChartView extends ViewPart {
 		parent.update();
 	}
 	
-	public XYSeriesCollection createDataSet(JFreeChart chart, double cycle) {
+	public XYSeriesCollection createIndigator(JFreeChart chart, String name, double cycle) {
 		XYSeriesCollection dataset = new XYSeriesCollection();
-		XYSeries xyseries = new XYSeries("cycle");
+		XYSeries xyseries = new XYSeries(name);
 		xyseries.add(cycle-0.005, 2);
 		xyseries.add(cycle+0.005, 2);
 		dataset.addSeries(xyseries);
