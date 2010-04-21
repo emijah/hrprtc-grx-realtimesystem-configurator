@@ -35,8 +35,7 @@ public class BenchmarkResultItem extends TreeModelItem
 	public double mean = 0;
 	public double stddev = 0;
 	public double cycle = 0;
-	private TimedState lastT1;
-	public List<Double> lastLog = new ArrayList<Double>();
+	public List<Double> lastLog_ = new ArrayList<Double>();
 
 	public BenchmarkResultItem() 
 	{
@@ -78,8 +77,7 @@ public class BenchmarkResultItem extends TreeModelItem
 	public void updateLog(NamedStateLog namedLog)
 	{
 		TimedState[] log = namedLog.log;
-		lastLog.clear();
-		int lastPos = 0;
+		List<Double> lastLog = new ArrayList<Double>();
 		stddev = Math.pow(stddev, 2);
 		for (int i=0; i<log.length; i++) {
 			int pos1 = i + namedLog.endPoint;
@@ -89,8 +87,10 @@ public class BenchmarkResultItem extends TreeModelItem
 			int pos2 = ( pos1 == log.length-1 ) ? 0:pos1+1;
 			
 			if ( log[pos1].data == 1 && log[pos2].data == 2) {
-				double diff = (log[pos2].tm.sec - log[pos1].tm.sec) + (log[pos2].tm.nsec - log[pos1].tm.nsec)*1.0e-9;
-				if ( diff < 0 || (lastT1 != null && log[pos1].tm.sec <= lastT1.tm.sec && log[pos1].tm.nsec <= lastT1.tm.nsec) ) {
+				double t1 = log[pos1].tm.sec + log[pos1].tm.nsec*1.0e-9;
+				double t2 = log[pos2].tm.sec + log[pos2].tm.nsec*1.0e-9;
+				double diff = t2 - t1;
+				if ( diff < 0 || (lastLog.size() > 0 && t1 <= lastLog.get(lastLog.size() - 1)) ) {
 					continue;
 				}
 				max = Math.max(max, diff);
@@ -99,18 +99,17 @@ public class BenchmarkResultItem extends TreeModelItem
 				stddev = (stddev*count + Math.pow(diff-mean, 2))/(count + 1);
 				count ++;
 				i++;
-				lastPos = pos1;
-				lastLog.add(log[pos1].tm.sec + log[pos1].tm.nsec*1.0e-9);
+				lastLog.add(t1);
 				lastLog.add(diff);
-				if ( max < 0 || min < 0) {
-					System.out.println("dataerror: "+ cycle + ":" +max +":" + min + ":" +pos1+":"+pos2+":"+namedLog.endPoint+":"+i );
-				}
 			}
 		}
-		stddev = Math.sqrt(stddev);
-		date   = new Date();
-		lastT1 = log[lastPos];
-		updateProperties();
+		if ( lastLog.size() > 0 ) {
+			lastLog_.clear();
+			lastLog_ = lastLog;
+			stddev = Math.sqrt(stddev);
+			date   = new Date();
+			updateProperties();
+		}
 	}
 	
 	public void updatePlatformInfo(PlatformInfo pInfo)
@@ -146,7 +145,6 @@ public class BenchmarkResultItem extends TreeModelItem
 		min = 0;
 		mean = 0;
 		stddev = 0;
-		lastT1 = null;
 		updateProperties();
 	}
 	
