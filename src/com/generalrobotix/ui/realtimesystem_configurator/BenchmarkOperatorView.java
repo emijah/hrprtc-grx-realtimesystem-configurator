@@ -52,6 +52,7 @@ import org.openrtp.namespaces.rts.version02.TargetPort;
 import OpenRTM.BenchmarkService;
 import OpenRTM.BenchmarkServiceHelper;
 import OpenRTM.NamedStateLog;
+import OpenRTM.PlatformInfo;
 import RTC.RTObject;
 import RTM.Manager;
 import RTM.ModuleProfile;
@@ -363,29 +364,28 @@ public class BenchmarkOperatorView extends ViewPart {
 		RTObject rtc = null;
 		BenchmarkService bmSVC = null;
 		try {
+			// get information from target system
 			double cycle = 1.0/ecModel.getRate();
 			rnc = GrxRTMUtil.getRootNamingContext(txtRobotHost_.getText()/*ecModel.getHostName()*/, robotPort_);
-			
 			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
 			bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
 			NamedStateLog[] logs = bmSVC.get_logs();
+			PlatformInfo pInfo = bmSVC.get_platform_info();
+			
+			// update logs
 			Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
 			while ( it.hasNext() ) {
 				RTComponentItem model = (RTComponentItem)it.next();
 				model.getResult().setCycle(cycle);
-				model.getResult().updatePlatformInfo(bmSVC.get_platform_info());
+				model.getResult().updatePlatformInfo(pInfo);
 				for (int i=0; i<logs.length; i++) {
 					if ( logs[i].id.equals(model.getName()) ) {
 						model.getResult().updateLog(logs[i]);
 						break;
 					}
 				}
-
-				TreeModelItem item = model.getParent();
-				if ( item instanceof RTComponentItem ) {
-					((RTComponentItem)item).calcSummation();
-				}
 			}
+			ecModel.calcSummation();
 		} catch (InvalidParameter e) {
 			e.printStackTrace();
 		} catch (NotAvailable e) {
