@@ -71,6 +71,7 @@ public class TimingChartView extends ViewPart {
 			public void run() {
 				changeShowMode();
 				action1.setText(SHOW_MODE_LABELS[showMode]);
+				updateCharts();
 			}
 		};
 		action1.setText(SHOW_MODE_LABELS[showMode]);
