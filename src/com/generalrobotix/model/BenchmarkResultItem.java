@@ -9,12 +9,24 @@ import OpenRTM.NamedStateLog;
 import OpenRTM.PlatformInfo;
 import RTC.TimedState;
 
-public class BenchmarkResultItem extends TreeModelItem { 
+public class BenchmarkResultItem extends TreeModelItem 
+{ 
 	private static final String PROPERTY_DATE = "Date";
 	private static final String PROPERTY_DATACOUNT = "dataCount";
 	private static final String PROPERTY_MAX_DURATION  = "Max. duration";
 	private static final String PROPERTY_MIN_DURATION  = "Min. duration";
 	private static final String PROPERTY_MEAN_DURATION = "Ave. duration";
+	private static final String PROPERTY_STDDEV_DURATION = "stddev duration";
+	
+	private static final String PROPERTY_CPU_TYPE = "CPU Type";
+	private static final String PROPERTY_CPU_NUM = "CPU Num.";
+	private static final String PROPERTY_CPU_FREQUENCY = "CPU Frequency";
+	private static final String PROPERTY_CPU_AFFINITY = "CPU Affinity";
+	private static final String PROPERTY_OS_NAME = "OS Name";
+	private static final String PROPERTY_OS_RELEASE = "OS Release";
+	private static final String PROPERTY_KERNEL_NAME = "Kernel Name";
+	private static final String PROPERTY_KERNEL_RELEASE = "Kernel Release";
+	private static final String PROPERTY_EXTRA_DATA = "Extra Data";
 	
 	public Date date;
 	public int count = 0;    
@@ -23,19 +35,8 @@ public class BenchmarkResultItem extends TreeModelItem {
 	public double mean = 0;
 	public double stddev = 0;
 	public double cycle = 0;
-	public TimedState lastT1;
-	public TimedState lastT2;
+	private TimedState lastT1;
 	public List<Double> lastLog = new ArrayList<Double>();
-
-	public String cpuType;
-	public int cpuNum;
-	public int cpuFrequency;
-	public int cpuAffinity;
-	public String osName;
-	public String osRelease;
-	public String kernelName; 
-	public String kernelRelease; 
-	public String extraData;
 
 	public BenchmarkResultItem() 
 	{
@@ -81,7 +82,7 @@ public class BenchmarkResultItem extends TreeModelItem {
 		int lastPos = 0;
 		stddev = Math.pow(stddev, 2);
 		for (int i=0; i<log.length; i++) {
-			int pos1 = i + namedLog.endPoint; //+1;
+			int pos1 = i + namedLog.endPoint;
 			if ( pos1 > log.length-1 ) {
 				pos1 -= log.length;
 			}
@@ -89,7 +90,7 @@ public class BenchmarkResultItem extends TreeModelItem {
 			
 			if ( log[pos1].data == 1 && log[pos2].data == 2) {
 				double diff = (log[pos2].tm.sec - log[pos1].tm.sec) + (log[pos2].tm.nsec - log[pos1].tm.nsec)*1.0e-9;
-				if ( diff < 0 || (lastT1 != null && log[pos1].tm.sec <= lastT1.tm.sec && log[pos1].tm.sec <= lastT1.tm.sec) ) {
+				if ( diff < 0 || (lastT1 != null && log[pos1].tm.sec <= lastT1.tm.sec && log[pos1].tm.nsec <= lastT1.tm.nsec) ) {
 					continue;
 				}
 				max = Math.max(max, diff);
@@ -101,29 +102,28 @@ public class BenchmarkResultItem extends TreeModelItem {
 				lastPos = pos1;
 				lastLog.add(log[pos1].tm.sec + log[pos1].tm.nsec*1.0e-9);
 				lastLog.add(diff);
-			}
-			if ( max < 0 || min < 0) {
-				System.out.println("dataerror: "+ cycle + ":" +max +":" + min + ":" +pos1+":"+pos2+":"+namedLog.endPoint+":"+i );
+				if ( max < 0 || min < 0) {
+					System.out.println("dataerror: "+ cycle + ":" +max +":" + min + ":" +pos1+":"+pos2+":"+namedLog.endPoint+":"+i );
+				}
 			}
 		}
 		stddev = Math.sqrt(stddev);
 		date   = new Date();
 		lastT1 = log[lastPos];
-		lastT2 = log[lastPos+1];
 		updateProperties();
 	}
 	
 	public void updatePlatformInfo(PlatformInfo pInfo)
 	{
-		cpuType = pInfo.cpuType;
-		cpuNum = pInfo.cpuNum;
-		cpuFrequency = pInfo.cpuFrequency;
-		cpuAffinity = pInfo.cpuAffinity;
-		osName = pInfo.osName;
-		osRelease = pInfo.osRelease;
-		kernelName = pInfo.kernelName;
-		kernelRelease = pInfo.kernelRelease;
-		extraData = pInfo.extraData;
+		setPropertyValue(PROPERTY_CPU_NUM, pInfo.cpuNum);
+		setPropertyValue(PROPERTY_CPU_FREQUENCY, pInfo.cpuFrequency);
+		setPropertyValue(PROPERTY_CPU_AFFINITY, pInfo.cpuAffinity);
+		setPropertyValue(PROPERTY_CPU_TYPE, pInfo.cpuType);
+		setPropertyValue(PROPERTY_OS_NAME, pInfo.osName);
+		setPropertyValue(PROPERTY_OS_RELEASE, pInfo.osRelease);
+		setPropertyValue(PROPERTY_KERNEL_NAME, pInfo.kernelName);
+		setPropertyValue(PROPERTY_KERNEL_RELEASE, pInfo.kernelRelease);
+		setPropertyValue(PROPERTY_EXTRA_DATA, pInfo.extraData);
 	}
 	
 	private void updateProperties()
@@ -132,19 +132,10 @@ public class BenchmarkResultItem extends TreeModelItem {
 		setPropertyValue(PROPERTY_MAX_DURATION, String.valueOf(max));
 		setPropertyValue(PROPERTY_MIN_DURATION, String.valueOf(min));
 		setPropertyValue(PROPERTY_MEAN_DURATION, String.valueOf(mean));
+		setPropertyValue(PROPERTY_STDDEV_DURATION, String.valueOf(stddev));
 		if ( date != null ) {
 			setPropertyValue(PROPERTY_DATE, String.valueOf(date.getTime()));
 		}
-		/*stddev = value.stddev;
-		date   = new Date();
-		cpuType = value2.cpuType;
-		cpuNum = value2.cpuNum;
-		cpuFrequency = value2.cpuFrequency;
-		osName = value2.osName;
-		osRelease = value2.osRelease;
-		kernelName = value2.kernelName;
-		kernelRelease = value2.kernelRelease;
-		extraData = value2.extraData;*/
 	}
 
 	public void reset()
@@ -156,7 +147,6 @@ public class BenchmarkResultItem extends TreeModelItem {
 		mean = 0;
 		stddev = 0;
 		lastT1 = null;
-		lastT2 = null;
 		updateProperties();
 	}
 	

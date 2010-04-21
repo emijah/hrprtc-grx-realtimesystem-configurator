@@ -24,8 +24,6 @@ import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.experimental.chart.swt.ChartComposite;
 
-import RTC.TimedState;
-
 import com.generalrobotix.model.ExecutionContextItem;
 import com.generalrobotix.model.RTComponentItem;
 import com.generalrobotix.model.TreeModelItem;

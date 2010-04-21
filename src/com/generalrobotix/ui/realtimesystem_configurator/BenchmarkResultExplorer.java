@@ -75,7 +75,8 @@ public class BenchmarkResultExplorer extends ViewPart
 	private static final String REALTIME_SYSTEM_PROJECT_NAME = "RealtimeSystemProjects";
 	private static final String LOG_FILE_NAME = "result.yaml";
 
-	public BenchmarkResultExplorer() {
+	public BenchmarkResultExplorer() 
+	{
 	}
 
 	@Override
@@ -217,6 +218,7 @@ public class BenchmarkResultExplorer extends ViewPart
 			setText("Save All Benchmark Results");
 			setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/save.png"));
 		}
+	
 		public void run() 
 		{
 			save();
