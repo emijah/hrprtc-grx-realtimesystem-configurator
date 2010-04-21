@@ -128,14 +128,16 @@ public class TimingChartView extends ViewPart {
 		XYSeriesCollection dataset = createIndigator(chart, "cycle", 1.0/item.getRate()*1000.0);
 		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
 		if ( showMode == LAST_PERIOD ) {
-			double bias = -1;
+			double offset = -1;
 			while ( rtcs.hasNext() ) {
 				RTComponentItem rtc = (RTComponentItem)rtcs.next();
 				List<Double> log = rtc.getResult().lastLog;
-				if ( bias <= 0 ) {
-					bias =  log.get(0);
+				if ( log.size() == 0 ) {
+					offset = 0;
+				} else if ( offset <= 0 ) {
+					offset =  log.get(0);
 				} else {
-					bias = Math.min(bias, log.get(0));
+					offset = Math.min(offset, log.get(0));
 				}
 			}
 			rtcs =  item.getChildren().iterator();
@@ -143,12 +145,14 @@ public class TimingChartView extends ViewPart {
 				RTComponentItem rtc = (RTComponentItem)rtcs.next();
 				XYSeries xyseries = new XYSeries(rtc.getName());
 				List<Double> log = rtc.getResult().lastLog;
-				for (int i=0; i<log.size(); i+=2) {
-					double t1 = log.get(i) - bias;
-					double t2 = t1 + log.get(i+1);
-					xyseries.add(t1*1000.0, 1);
-					xyseries.add(t2*1000.0, 1);
-					xyseries.add((t2+0.0000001)*1000.0, 0);
+				if ( log.size() > 0 ) {
+					for (int i=0; i<log.size(); i+=2) {
+						double t1 = log.get(i) - offset;
+						double t2 = t1 + log.get(i+1);
+						xyseries.add(t1*1000.0, 1);
+						xyseries.add(t2*1000.0, 1);
+						xyseries.add((t2+0.0000001)*1000.0, 0);
+					}
 				}
 				dataset.addSeries(xyseries);
 			}
