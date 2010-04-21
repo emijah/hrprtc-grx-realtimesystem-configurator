@@ -73,6 +73,7 @@ public class BenchmarkResultExplorer extends ViewPart
 
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 	private static final String REALTIME_SYSTEM_PROJECT_NAME = "RealtimeSystemProjects";
+	private static final String LOG_FILE_NAME = "result.yaml";
 
 	public BenchmarkResultExplorer() {
 	}
@@ -162,8 +163,8 @@ public class BenchmarkResultExplorer extends ViewPart
 					
 					// load result
 					IFolder folder = project.getFolder(rts.getId());
-					if ( folder.findMember("result.yaml", false) != null ) {
-						IFile file = folder.getFile("result.yaml");
+					if ( folder.findMember(LOG_FILE_NAME, false) != null ) {
+						IFile file = folder.getFile(LOG_FILE_NAME);
 						Map<String, Map<Object, Object>> ret = fromYaml(file);
 						if ( ret != null ) {
 							Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
@@ -427,7 +428,7 @@ public class BenchmarkResultExplorer extends ViewPart
 			if ( item instanceof RTSystemItem ) {
 				RTSystemItem rts = (RTSystemItem)item;
 				IFolder folder = project.getFolder(rts.getId());
-				IFile   file = folder.getFile("result.yaml");
+				IFile   file = folder.getFile(LOG_FILE_NAME);
 				try {
 					if ( !file.exists() ) {
 						file.create(null, false, progress);

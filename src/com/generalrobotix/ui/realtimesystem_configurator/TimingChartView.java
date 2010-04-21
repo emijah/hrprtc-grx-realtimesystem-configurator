@@ -35,11 +35,11 @@ public class TimingChartView extends ViewPart {
 	private Composite parent;
 	private static final int INITIAL_CHART_NUM = 3;
 	private static final String XAXIS_LABEL = "Time[msec]";
-	private static final int SHOW_WHOLE   = 0;
+	private static final int LAST_PERIOD  = 0;
 	private static final int SHOW_WORST   = 1;
 	private static final int SHOW_AVERAGE = 2;
-	private static final String[] SHOW_MODE_LABELS = new String[]{"whole data", "worst one", "average"};
-	private int showMode = SHOW_WHOLE;
+	private static final String[] SHOW_MODE_LABELS = new String[]{"last period", "worst one", "average"};
+	private int showMode = LAST_PERIOD;
 	private Action action1;
 	private static TimingChartView this_;
 	private TreeModelItem selectedItem_;
@@ -127,7 +127,7 @@ public class TimingChartView extends ViewPart {
 		chart.setTitle("EC : "+item.getName());
 		XYSeriesCollection dataset = createIndigator(chart, "cycle", 1.0/item.getRate()*1000.0);
 		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
-		if ( showMode == SHOW_WHOLE ) {
+		if ( showMode == LAST_PERIOD ) {
 			double bias = -1;
 			while ( rtcs.hasNext() ) {
 				RTComponentItem rtc = (RTComponentItem)rtcs.next();
