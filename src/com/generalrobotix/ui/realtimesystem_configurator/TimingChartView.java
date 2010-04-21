@@ -129,7 +129,7 @@ public class TimingChartView extends ViewPart {
 			double offset = -1;
 			while ( rtcs.hasNext() ) {
 				RTComponentItem rtc = (RTComponentItem)rtcs.next();
-				List<Double> log = rtc.getResult().lastLog;
+				List<Double> log = rtc.getResult().lastLog_;
 				if ( log.size() == 0 ) {
 					offset = 0;
 				} else if ( offset <= 0 ) {
@@ -142,7 +142,7 @@ public class TimingChartView extends ViewPart {
 			while ( rtcs.hasNext() ) {
 				RTComponentItem rtc = (RTComponentItem)rtcs.next();
 				XYSeries xyseries = new XYSeries(rtc.getName());
-				List<Double> log = rtc.getResult().lastLog;
+				List<Double> log = rtc.getResult().lastLog_;
 				if ( log.size() > 0 ) {
 					for (int i=0; i<log.size(); i+=2) {
 						double t1 = log.get(i) - offset;
