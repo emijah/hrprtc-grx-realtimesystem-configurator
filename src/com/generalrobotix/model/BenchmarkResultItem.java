@@ -110,6 +110,7 @@ public class BenchmarkResultItem extends TreeModelItem {
 		date   = new Date();
 		lastT1 = log[lastPos];
 		lastT2 = log[lastPos+1];
+		updateProperties();
 	}
 	
 	public void updatePlatformInfo(PlatformInfo pInfo)

@@ -22,6 +22,7 @@ import java.util.Map;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
+import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.IPath;
@@ -56,11 +57,13 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.ho.yaml.Yaml;
 
 import com.generalrobotix.model.BenchmarkResultItem;
+import com.generalrobotix.model.ExecutionContextItem;
 import com.generalrobotix.model.RTComponentItem;
 import com.generalrobotix.model.RTSystemItem;
 import com.generalrobotix.model.TreeModelItem;
 
-public class BenchmarkResultExplorer extends ViewPart {
+public class BenchmarkResultExplorer extends ViewPart 
+{
 	private IProject project;
 	private TreeModelItem rootItem = new TreeModelItem();
 	private CheckboxTreeViewer resultViewer;
@@ -69,18 +72,22 @@ public class BenchmarkResultExplorer extends ViewPart {
 	private List<Action> actionList = new ArrayList<Action>();
 
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+	private static final String REALTIME_SYSTEM_PROJECT_NAME = "RealtimeSystemProjects";
 
 	public BenchmarkResultExplorer() {
 	}
 
 	@Override
-	public void createPartControl(Composite parent) {
+	public void createPartControl(Composite parent) 
+	{
 		parent.setLayout(new GridLayout(1, false));
 		
 		fdlg = new FileDialog(parent.getShell(), SWT.OPEN);
 		
 		resultViewer = setupTreeViewer(parent);
 		getSite().setSelectionProvider(resultViewer);
+		Transfer[] transfers = new Transfer[] { org.eclipse.swt.dnd.FileTransfer.getInstance() };
+		resultViewer.addDropSupport(DND.DROP_COPY | DND.DROP_MOVE, transfers, new MyViewerDropListener(resultViewer));
 		
 		actionList.add(new ImportAction());
 		actionList.add(new SaveAction());
@@ -88,7 +95,8 @@ public class BenchmarkResultExplorer extends ViewPart {
 		MenuManager menuManager = new MenuManager("#PopupMenu");
 		menuManager.setRemoveAllWhenShown(true);
 		menuManager.addMenuListener(new IMenuListener() {
-			public void menuAboutToShow(IMenuManager manager) {
+			public void menuAboutToShow(IMenuManager manager) 
+			{
 				Iterator<Action> it = actionList.iterator();
 				while (it.hasNext()) {
 					manager.add(it.next());
@@ -107,61 +115,91 @@ public class BenchmarkResultExplorer extends ViewPart {
 			manager1.add(action);
 			manager2.add(action);
 		}
-		
-		Transfer[] transfers = new Transfer[] { org.eclipse.swt.dnd.FileTransfer.getInstance() };
-		resultViewer.addDropSupport(DND.DROP_COPY | DND.DROP_MOVE, transfers, new MyViewerDropListener(resultViewer));
-		
+
 		// TODO show dialog to confirm create project
-		project = getProject("RealtimeSystemConfiguratorRepository");
+		project = getProject(REALTIME_SYSTEM_PROJECT_NAME);
 		updateList();
 	}
 
 	@Override
-	public void setFocus() {
+	public void setFocus()
+	{
 	}
 	
-	private IProject getProject(String projectName) {
+	private IProject getProject(String projectName)
+	{
 		IProject ret = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
 		try {
 			if ( !ret.exists() ) {
 				ret.create(progress);
 				System.out.println(projectName +" is created.");
 			}
-			if ( ret.isOpen() ) {
+			if ( !ret.isOpen() ) {
 				ret.open(progress);
 				System.out.println(projectName +" is opened.");
 			}
+			ret.refreshLocal(IResource.DEPTH_INFINITE, progress);
 		} catch (CoreException e) {
 			e.printStackTrace();
 		}
 		return ret;
 	}
 
-	private void updateList() {
+	private void updateList() 
+	{
 		File[] files = project.getLocation().toFile().listFiles();
 		for (int i=0; files != null && i<files.length; i++) {
 			if ( files[i].isDirectory() ) {
 				File[] systemprofiles = files[i].listFiles(new FilenameFilter(){
-					public boolean accept(File file, String name) {
+					public boolean accept(File file, String name)
+					{
 						return ( name.endsWith(".xml") );
 					}
 				});
 				if ( systemprofiles.length > 0 ) {
 					RTSystemItem rts = new RTSystemItem(systemprofiles[0].getAbsolutePath());
 					rootItem.add(rts);
+					
+					// load result
+					IFolder folder = project.getFolder(rts.getId());
+					if ( folder.findMember("result.yaml", false) != null ) {
+						IFile file = folder.getFile("result.yaml");
+						Map<String, Map<Object, Object>> ret = fromYaml(file);
+						if ( ret != null ) {
+							Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
+							while(rtcs.hasNext()) {
+								RTComponentItem rtc = rtcs.next();
+								Map<Object, Object> m = ret.get(rtc.getId());
+								if ( m != null) {
+									rtc.setResult(m);
+								}
+							}
+						}
+					}
+					// calculate summation
+					Iterator<RTComponentItem> it = rts.getRTCMembers().iterator();
+					while ( it.hasNext() ) {
+						RTComponentItem model = it.next();
+						if ( model instanceof ExecutionContextItem ) {
+							((ExecutionContextItem)model).calcSummation();
+						}
+					}
 				}
 			}
 		}
-		load();
 		resultViewer.refresh();
 	}
 	
-	private class ImportAction extends Action {
-		public ImportAction() {
+	private class ImportAction extends Action
+	{
+		public ImportAction()
+		{
 			setText("Import RTSystem Profile");
 			setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/folder_open.png"));
 		}
-		public void run() {
+		
+		public void run()
+		{
 			fdlg.setFilterExtensions( new String[] {"*.xml"} );
 			fdlg.open();
 			String fname = fdlg.getFilterPath() + java.io.File.separator + fdlg.getFileName();
@@ -171,45 +209,57 @@ public class BenchmarkResultExplorer extends ViewPart {
 		}
 	};
 	
-	private class SaveAction extends Action {
-		public SaveAction() {
+	private class SaveAction extends Action 
+	{
+		public SaveAction() 
+		{
 			setText("Save All Benchmark Results");
 			setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/save.png"));
 		}
-		public void run() {
+		public void run() 
+		{
 			save();
 		}
 	};
 
-	class ViewContentProvider implements ITreeContentProvider {
+	private class ViewContentProvider implements ITreeContentProvider
+	{
 
-		public void inputChanged(Viewer v, Object oldInput, Object newInput) {
+		public void inputChanged(Viewer v, Object oldInput, Object newInput)
+		{
 		}
 		
-		public void dispose() {
+		public void dispose()
+		{
 		}
 		
-		public Object[] getElements(Object parent) {
+		public Object[] getElements(Object parent)
+		{
 			return ((TreeModelItem)parent).getChildren().toArray();
 		}
 		
-		public Object[] getChildren(Object parentElement) {
+		public Object[] getChildren(Object parentElement)
+		{
 		    return ((TreeModelItem)parentElement).getChildren().toArray();
 		}
 		
-		public Object getParent(Object element) {
+		public Object getParent(Object element)
+		{
 			return ((TreeModelItem)element).getParent();
 		}
 		
-		public boolean hasChildren(Object element) {
+		public boolean hasChildren(Object element)
+		{
 			return (getChildren(element).length > 0);
 		}
 	}
 	
-	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider {
+	private class ViewLabelProvider extends LabelProvider implements ITableLabelProvider
+	{
 	    private HashMap<ImageDescriptor, Image> imageMap;
 
-		public String getColumnText(Object obj, int index) {
+		public String getColumnText(Object obj, int index)
+		{
 			try {				
 				TreeModelItem item = (TreeModelItem)obj;
 				switch(index) {
@@ -237,14 +287,16 @@ public class BenchmarkResultExplorer extends ViewPart {
 			return "";
 		}
 		
-		public Image getColumnImage(Object obj, int index) {
+		public Image getColumnImage(Object obj, int index)
+		{
 			if ( index == 0 ) {
 				return getImage(obj);
 			}
 			return null;
 		}
 		
-	    public Image getImage(Object element) {
+	    public Image getImage(Object element)
+	    {
 	        if (element instanceof TreeModelItem) {
 	            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), ((TreeModelItem)element).getIconPath());
 	            return cacheImage(desc);
@@ -252,7 +304,8 @@ public class BenchmarkResultExplorer extends ViewPart {
 	        return null;
 	    }
 
-		Image cacheImage(ImageDescriptor desc) {
+		Image cacheImage(ImageDescriptor desc)
+		{
 			if ( imageMap == null ) {
 				imageMap = new HashMap<ImageDescriptor, Image>();
 			}
@@ -264,7 +317,8 @@ public class BenchmarkResultExplorer extends ViewPart {
 	        return image;
 	    }
 
-	    public void dispose() {
+	    public void dispose()
+	    {
 	        if (imageMap != null) {
 	        	Iterator<Image> images = imageMap.values().iterator();
 	            while (images.hasNext()) {
@@ -276,7 +330,8 @@ public class BenchmarkResultExplorer extends ViewPart {
 	    }
 	}
 	
-	private CheckboxTreeViewer setupTreeViewer(Composite parent) {
+	private CheckboxTreeViewer setupTreeViewer(Composite parent)
+	{
 		CheckboxTreeViewer viewer = new CheckboxTreeViewer(parent, SWT.NONE);
 		viewer.setContentProvider(new ViewContentProvider());
 		viewer.setLabelProvider(new ViewLabelProvider());
@@ -320,26 +375,33 @@ public class BenchmarkResultExplorer extends ViewPart {
 		return viewer;
 	}
 	
-	private void setHeader(Tree tree, int alignment, int index, int width, String text) {
+	private void setHeader(Tree tree, int alignment, int index, int width, String text)
+	{
 		TreeColumn column = new TreeColumn(tree, alignment, index);
 		column.setText(text);
 		column.setWidth(width);
 	}
 
-	private void importProfile(String fname) {
+	private void importProfile(String fname) 
+	{
 		if ( fname != null && fname != "" ) {
 			try {
 				File srcFile = new File(fname);
 				RTSystemItem rts = new RTSystemItem(fname);
 				rootItem.add(rts);
+				
+				// create a directory & copy the system profile
 				IFolder destFolder = project.getFolder(rts.getId());
 				if ( !destFolder.exists() ) {
 					destFolder.create(true, true, progress);
+					System.out.println(destFolder.getName() + " is created.");
 				}
 				IPath destPath = destFolder.getFile(srcFile.getName()).getLocation();
-				IFile destFile = project.getFile(destPath);
-				if ( !destFile.exists() ) {
+				//IFile destFile = project.getFile(destPath);
+				IFile destFile = destFolder.getFile(srcFile.getName());
+				if ( !destFile.isAccessible() ) {
 					destFile.create(null, true, progress);
+					System.out.println(destFile.getName() + " is created.");
 				}
 
 				FileChannel srcChannel  = new FileInputStream(srcFile.getAbsolutePath()).getChannel();
@@ -357,27 +419,33 @@ public class BenchmarkResultExplorer extends ViewPart {
 		}
 	}
 	
-	private void save() {
+	private void save()
+	{
 		Iterator<TreeModelItem> it = rootItem.getChildren().iterator();
 		while ( it.hasNext() ) {
 			TreeModelItem item = it.next();
 			if ( item instanceof RTSystemItem ) {
 				RTSystemItem rts = (RTSystemItem)item;
-				String id = rts.getId();
-				IFolder folder = project.getFolder(id);
+				IFolder folder = project.getFolder(rts.getId());
 				IFile   file = folder.getFile("result.yaml");
 				try {
+					if ( !file.exists() ) {
+						file.create(null, false, progress);
+					}
 					file.setContents(new ByteArrayInputStream(toYaml(rts).getBytes("UTF-8")), true, false, progress);
 				} catch (UnsupportedEncodingException e) {
 					e.printStackTrace();
 				} catch (CoreException e) {
+					e.printStackTrace();
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
 		}
 	}
 	
-	private String toYaml(RTSystemItem rts) {
+	private String toYaml(RTSystemItem rts)
+	{
 		Map<String, Map<Object, Object>> resultMap = new HashMap<String, Map<Object, Object>>();
 		Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
 		while (rtcs.hasNext()) {
@@ -401,34 +469,10 @@ public class BenchmarkResultExplorer extends ViewPart {
 
         return result;
     }
-	
-	private void load() {
-		Iterator<TreeModelItem> it = rootItem.getChildren().iterator();
-		while ( it.hasNext() ) {
-			TreeModelItem item = it.next();
-			if ( item instanceof RTSystemItem ) {
-				RTSystemItem rts = (RTSystemItem)item;
-				String id = rts.getId();
-				IFolder folder = project.getFolder(id);
-				if ( folder.findMember("result.yaml", false) != null ) {
-					IFile file = folder.getFile("result.yaml");
-					Map<String, Map<Object, Object>> ret = fromYaml(file);
-					if ( ret != null ) {
-						Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
-						while(rtcs.hasNext()) {
-							RTComponentItem rtc = rtcs.next();
-							Map m = ret.get(rtc.getId());
-							if ( m != null) {
-								rtc.setResult(m);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
+
     
-    private Map<String, Map<Object, Object>> fromYaml(IFile file) {
+    private Map<String, Map<Object, Object>> fromYaml(IFile file)
+    {
     	if ( !file.exists() || file.isPhantom() ) {
     		return null;
     	}
@@ -468,13 +512,16 @@ public class BenchmarkResultExplorer extends ViewPart {
         return null;
     }
     
-	public class MyViewerDropListener extends org.eclipse.jface.viewers.ViewerDropAdapter { 
-		protected MyViewerDropListener(Viewer viewer) {
+	public class MyViewerDropListener extends org.eclipse.jface.viewers.ViewerDropAdapter
+	{
+		protected MyViewerDropListener(Viewer viewer)
+		{
 			super(viewer);
 		}
 
 		@Override
-		public boolean performDrop(Object data) {
+		public boolean performDrop(Object data)
+		{
 			if ( data instanceof String[] ) {
 				importProfile(((String[])data)[0]);
 			}
@@ -482,7 +529,8 @@ public class BenchmarkResultExplorer extends ViewPart {
 		}
 
 		@Override
-		public boolean validateDrop(Object target, int operation, TransferData transferType) {
+		public boolean validateDrop(Object target, int operation, TransferData transferType)
+		{
 			return org.eclipse.swt.dnd.FileTransfer.getInstance().isSupportedType(transferType);
 		} 
 	} 
