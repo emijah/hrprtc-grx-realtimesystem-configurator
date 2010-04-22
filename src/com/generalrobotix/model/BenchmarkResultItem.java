@@ -37,7 +37,9 @@ public class BenchmarkResultItem extends TreeModelItem
 	public double stddev = 0;
 	public double cycle = 0;
 	public List<Double> lastLog_ = new ArrayList<Double>();
+	
 	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
+	private static int LOG_CAPACITY = 1000;
 
 	public BenchmarkResultItem() 
 	{
@@ -79,9 +81,9 @@ public class BenchmarkResultItem extends TreeModelItem
 	public void updateLog(NamedStateLog namedLog)
 	{
 		TimedState[] log = namedLog.log;
-		List<Double> lastLog = new ArrayList<Double>();
 		double lastT = ( lastLog_ != null && lastLog_.size() > 0 ) ? lastLog_.get(lastLog_.size() - 2) : 0;
-		stddev = Math.pow(stddev, 2);
+		int lastCount = count;
+		//stddev = Math.pow(stddev, 2);
 		for (int i=0; i<log.length; i++) {
 			int pos1 = namedLog.headPos + i;
 			if ( pos1 > log.length-1 ) {
@@ -93,20 +95,22 @@ public class BenchmarkResultItem extends TreeModelItem
 				double diff = log[pos2].tm.sec + log[pos2].tm.nsec*1.0e-9 - t1;
 				if ( diff > 0 ) {
 					max = Math.max(max, diff);
-					min = Math.min(min, diff);
+					//min = Math.min(min, diff);
 					mean = (mean*count + diff)/(count + 1);
-					stddev = (stddev*count + Math.pow(diff-mean, 2))/(count + 1);
+					//stddev = (stddev*count + Math.pow(diff-mean, 2))/(count + 1);
 					count ++;
 					i++;
-					lastLog.add(t1);
-					lastLog.add(diff);
+					lastLog_.add(t1);
+					lastLog_.add(diff);
+					while ( lastLog_.size() > LOG_CAPACITY ) {
+						lastLog_.remove(0);
+						lastLog_.remove(0);
+					}
 				}
 			}
 		}
-		if ( lastLog.size() > 0 ) {
-			lastLog_.clear();
-			lastLog_ = lastLog;
-			stddev = Math.sqrt(stddev);
+		//stddev = Math.sqrt(stddev);
+		if ( lastCount < count ) {
 			date   = new Date();
 			updateProperties();
 		}
