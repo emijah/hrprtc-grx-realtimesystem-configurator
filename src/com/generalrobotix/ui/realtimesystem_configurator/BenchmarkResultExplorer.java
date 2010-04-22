@@ -229,13 +229,8 @@ public class BenchmarkResultExplorer extends ViewPart
 	private class ViewContentProvider implements ITreeContentProvider
 	{
 
-		public void inputChanged(Viewer v, Object oldInput, Object newInput)
-		{
-		}
-		
-		public void dispose()
-		{
-		}
+		public void inputChanged(Viewer v, Object oldInput, Object newInput) {}
+		public void dispose() {}
 		
 		public Object[] getElements(Object parent)
 		{
@@ -301,7 +296,7 @@ public class BenchmarkResultExplorer extends ViewPart
 		
 	    public Image getImage(Object element)
 	    {
-	        if (element instanceof TreeModelItem) {
+	        if ( element instanceof TreeModelItem ) {
 	            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), ((TreeModelItem)element).getIconPath());
 	            return cacheImage(desc);
 	        }
@@ -314,7 +309,7 @@ public class BenchmarkResultExplorer extends ViewPart
 				imageMap = new HashMap<ImageDescriptor, Image>();
 			}
 	        Image image = (Image) imageMap.get(desc);
-	        if (image == null) {
+	        if ( image == null ) {
 	            image = desc.createImage();
 	            imageMap.put(desc, image);
 	        }
@@ -323,9 +318,9 @@ public class BenchmarkResultExplorer extends ViewPart
 
 	    public void dispose()
 	    {
-	        if (imageMap != null) {
+	        if ( imageMap != null ) {
 	        	Iterator<Image> images = imageMap.values().iterator();
-	            while (images.hasNext()) {
+	            while ( images.hasNext() ) {
 	                images.next().dispose();
 	            }
 	            imageMap = null;
@@ -340,8 +335,10 @@ public class BenchmarkResultExplorer extends ViewPart
 		viewer.setContentProvider(new ViewContentProvider());
 		viewer.setLabelProvider(new ViewLabelProvider());
 		viewer.setInput(rootItem);
-		viewer.addCheckStateListener(new ICheckStateListener(){
-			public void checkStateChanged(CheckStateChangedEvent event) {
+		viewer.addCheckStateListener(new ICheckStateListener()
+		{
+			public void checkStateChanged(CheckStateChangedEvent event)
+			{
 				boolean isSelected = event.getChecked();
 				TreeModelItem item = (TreeModelItem)event.getElement();
 				resultViewer.setSubtreeChecked(item, isSelected);
