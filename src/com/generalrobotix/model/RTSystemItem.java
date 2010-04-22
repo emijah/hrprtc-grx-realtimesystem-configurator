@@ -38,7 +38,6 @@ public class RTSystemItem extends TreeModelItem {
 			profile = rtsProfileOperator.loadXmlRts(fname);
 	    	String[] ids = profile.getId().split(":");
 	    	setName(ids[1].substring(ids[1].lastIndexOf(".")+1));
-	    	version = ids[2];
 		} catch (Exception e) {
 			e.printStackTrace();
 		}

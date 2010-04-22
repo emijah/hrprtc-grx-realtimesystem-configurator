@@ -83,13 +83,13 @@ public class BenchmarkResultItem extends TreeModelItem
 		double lastT = ( lastLog_ != null && lastLog_.size() > 0 ) ? lastLog_.get(lastLog_.size() - 2) : 0;
 		stddev = Math.pow(stddev, 2);
 		for (int i=0; i<log.length; i++) {
-			int pos1 = namedLog.endPoint + i;
+			int pos1 = namedLog.headPos + i;
 			if ( pos1 > log.length-1 ) {
 				pos1 -= log.length;
 			}
 			int pos2 = ( pos1 == log.length-1 ) ? 0 : pos1+1;
 			double t1 = log[pos1].tm.sec + log[pos1].tm.nsec*1.0e-9;
-			if ( lastT < t1 && log[pos1].data == 1 && log[pos2].data == 2) {
+			if ( lastT < t1 && log[pos1].data == 1 && log[pos2].data == 2 ) {
 				double diff = log[pos2].tm.sec + log[pos2].tm.nsec*1.0e-9 - t1;
 				if ( diff > 0 ) {
 					max = Math.max(max, diff);
