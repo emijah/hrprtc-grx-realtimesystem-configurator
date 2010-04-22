@@ -18,15 +18,15 @@ public class BenchmarkResultItem extends TreeModelItem
 	private static final String PROPERTY_MEAN_DURATION = "Ave. duration";
 	private static final String PROPERTY_STDDEV_DURATION = "stddev duration";
 	
-	private static final String PROPERTY_CPU_TYPE = "CPU Type";
-	private static final String PROPERTY_CPU_NUM = "CPU Num.";
-	private static final String PROPERTY_CPU_FREQUENCY = "CPU Frequency";
-	private static final String PROPERTY_CPU_AFFINITY = "CPU Affinity";
-	private static final String PROPERTY_OS_NAME = "OS Name";
-	private static final String PROPERTY_OS_RELEASE = "OS Release";
-	private static final String PROPERTY_KERNEL_NAME = "Kernel Name";
-	private static final String PROPERTY_KERNEL_RELEASE = "Kernel Release";
-	private static final String PROPERTY_EXTRA_DATA = "Extra Data";
+	public static final String PROPERTY_CPU_TYPE = "CPU Type";
+	public static final String PROPERTY_CPU_NUM = "CPU Num.";
+	public static final String PROPERTY_CPU_FREQUENCY = "CPU Frequency";
+	public static final String PROPERTY_CPU_AFFINITY = "CPU Affinity";
+	public static final String PROPERTY_OS_NAME = "OS Name";
+	public static final String PROPERTY_OS_RELEASE = "OS Release";
+	public static final String PROPERTY_KERNEL_NAME = "Kernel Name";
+	public static final String PROPERTY_KERNEL_RELEASE = "Kernel Release";
+	public static final String PROPERTY_EXTRA_DATA = "Extra Data";
 	
 	public Date date;
 	public int count = 0;    
@@ -80,11 +80,11 @@ public class BenchmarkResultItem extends TreeModelItem
 		List<Double> lastLog = new ArrayList<Double>();
 		stddev = Math.pow(stddev, 2);
 		for (int i=0; i<log.length; i++) {
-			int pos1 = i + namedLog.endPoint;
+			int pos1 = namedLog.endPoint + i;
 			if ( pos1 > log.length-1 ) {
 				pos1 -= log.length;
 			}
-			int pos2 = ( pos1 == log.length-1 ) ? 0:pos1+1;
+			int pos2 = ( pos1 == log.length-1 ) ? 0 : pos1+1;
 			
 			if ( log[pos1].data == 1 && log[pos2].data == 2) {
 				double t1 = log[pos1].tm.sec + log[pos1].tm.nsec*1.0e-9;

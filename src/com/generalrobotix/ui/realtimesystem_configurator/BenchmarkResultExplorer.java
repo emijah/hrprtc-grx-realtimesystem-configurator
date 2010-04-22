@@ -1,14 +1,14 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
-import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
@@ -119,7 +119,7 @@ public class BenchmarkResultExplorer extends ViewPart
 		}
 
 		// TODO show dialog to confirm create project
-		project = getProject(REALTIME_SYSTEM_PROJECT_NAME);
+			project = getProject(REALTIME_SYSTEM_PROJECT_NAME);
 		updateList();
 	}
 
@@ -163,20 +163,21 @@ public class BenchmarkResultExplorer extends ViewPart
 					rootItem.add(rts);
 					
 					// load result
-					IFolder folder = project.getFolder(rts.getId());
-					if ( folder.findMember(LOG_FILE_NAME, false) != null ) {
-						IFile file = folder.getFile(LOG_FILE_NAME);
-						Map<String, Map<Object, Object>> ret = fromYaml(file);
-						if ( ret != null ) {
-							Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
-							while(rtcs.hasNext()) {
-								RTComponentItem rtc = rtcs.next();
-								Map<Object, Object> m = ret.get(rtc.getId());
-								if ( m != null) {
-									rtc.setResult(m);
+					try {
+						IFolder folder = project.getFolder(rts.getId());
+						if ( folder.findMember(LOG_FILE_NAME, false) != null ) {
+							IFile file = folder.getFile(LOG_FILE_NAME);
+							Map<String, BenchmarkResultItem> ret = fromYaml(file);
+							if ( ret != null ) {
+								Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
+								while(rtcs.hasNext()) {
+									RTComponentItem rtc = rtcs.next();
+									rtc.setResult(ret.get(rtc.getId()));
 								}
 							}
 						}
+					} catch (Exception e) {
+						System.out.println("Exception occured during loading log file.");
 					}
 					// calculate summation
 					Iterator<RTComponentItem> it = rts.getRTCMembers().iterator();
@@ -449,72 +450,40 @@ public class BenchmarkResultExplorer extends ViewPart
 	
 	private String toYaml(RTSystemItem rts)
 	{
-		Map<String, Map<Object, Object>> resultMap = new HashMap<String, Map<Object, Object>>();
+		Map<String, BenchmarkResultItem> resultMap = new HashMap<String, BenchmarkResultItem>();
 		Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
 		while (rtcs.hasNext()) {
 			RTComponentItem rtc = rtcs.next();
-			resultMap.put("'"+rtc.getId()+"'", rtc.getResult().getPropertyMap());
+			resultMap.put(rtc.getId(), rtc.getResult());
 		}
-		
-        String result = Yaml.dump(resultMap);
-        result = result.replace("\r\n", "\n"); //$NON-NLS-1$ //$NON-NLS-2$
-        result = result.replace("--- \n", ""); //$NON-NLS-1$ //$NON-NLS-2$
-        result = result.replace("\"", ""); //$NON-NLS-1$ //$NON-NLS-2$
-        result = result.replace(" !java.util.LinkedHashMap", ""); //$NON-NLS-1$ //$NON-NLS-2$
-        result = result.replaceAll("-\n *", "- "); //$NON-NLS-1$ //$NON-NLS-2$
-        result = result.replace(": \n", ":\n"); //$NON-NLS-1$ //$NON-NLS-2$
-        if (result.length() > 0) {
-            result = result.substring(0, result.length() - 1);
-        }
-        if (!result.endsWith("\n")) {
-            result += "\n";
-        }
-
-        return result;
-    }
-
-    
-    private Map<String, Map<Object, Object>> fromYaml(IFile file)
+		String result = Yaml.dump(resultMap);
+		return result;
+	}
+	
+    private Map<String, BenchmarkResultItem> fromYaml(IFile file)
     {
-    	if ( !file.exists() || file.isPhantom() ) {
+    	if ( file == null || !file.exists() || file.isPhantom() ) {
     		return null;
     	}
-        BufferedInputStream bufferedIn = null;
-        ByteArrayOutputStream byteOut = null;
+    	Reader reader = null;
         try {
-            bufferedIn = new BufferedInputStream(file.getContents(true));
-            byteOut = new ByteArrayOutputStream();
-            int read = 0;
-            while ((read = bufferedIn.read()) != -1) {
-                byteOut.write(read);
-            }
-            Object yaml = Yaml.load(byteOut.toString("UTF-8"));
-            return (Map<String, Map<Object, Object>>)yaml;
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (CoreException e) {
-            e.printStackTrace();
-        } catch (Exception ex) {
-        	ex.printStackTrace();
-        } finally {
-            try {
-                if (bufferedIn != null) {
-                    bufferedIn.close();
-                }
-            } catch (IOException ioe) {
-            }
-            try {
-                if (byteOut != null) {
-                    byteOut.close();
-                }
-            } catch (IOException ioe) {
-            }
+            reader = new BufferedReader(new InputStreamReader(file.getContents(), "UTF-8"));
+            Object yaml = Yaml.load(reader);
+            return (Map<String, BenchmarkResultItem>)yaml;
+        } catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} catch (CoreException e) {
+			e.printStackTrace();
+		} finally {
+        	try {
+				reader.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
         }
         return null;
     }
-    
+	
 	public class MyViewerDropListener extends org.eclipse.jface.viewers.ViewerDropAdapter
 	{
 		protected MyViewerDropListener(Viewer viewer)
