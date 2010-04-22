@@ -70,6 +70,7 @@ public class BenchmarkResultExplorer extends ViewPart
 	private NullProgressMonitor progress;
 	private FileDialog fdlg;
 	private List<Action> actionList = new ArrayList<Action>();
+	private static BenchmarkResultExplorer this_;
 
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 	private static final String REALTIME_SYSTEM_PROJECT_NAME = "RealtimeSystemProjects";
@@ -77,6 +78,12 @@ public class BenchmarkResultExplorer extends ViewPart
 
 	public BenchmarkResultExplorer() 
 	{
+		this_ = this;
+	}
+	
+	public static BenchmarkResultExplorer getInstance()
+	{
+		return this_;
 	}
 
 	@Override
@@ -119,13 +126,18 @@ public class BenchmarkResultExplorer extends ViewPart
 		}
 
 		// TODO show dialog to confirm create project
-			project = getProject(REALTIME_SYSTEM_PROJECT_NAME);
+		project = getProject();
 		updateList();
 	}
 
 	@Override
 	public void setFocus()
 	{
+	}
+	
+	public IProject getProject()
+	{
+		return getProject(REALTIME_SYSTEM_PROJECT_NAME);
 	}
 	
 	private IProject getProject(String projectName)
@@ -212,7 +224,7 @@ public class BenchmarkResultExplorer extends ViewPart
 		}
 	};
 	
-	private class SaveAction extends Action 
+	private class SaveAction extends Action
 	{
 		public SaveAction() 
 		{
@@ -220,7 +232,7 @@ public class BenchmarkResultExplorer extends ViewPart
 			setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/save.png"));
 		}
 	
-		public void run() 
+		public void run()
 		{
 			save();
 		}
@@ -392,27 +404,35 @@ public class BenchmarkResultExplorer extends ViewPart
 				rootItem.add(rts);
 				
 				// create a directory & copy the system profile
-				IFolder destFolder = project.getFolder(rts.getId());
-				if ( !destFolder.exists() ) {
-					destFolder.create(true, true, progress);
-					System.out.println(destFolder.getName() + " is created.");
+				IFolder rtsTopFolder = project.getFolder(rts.getId());
+				if ( !rtsTopFolder.exists() ) {
+					rtsTopFolder.create(true, true, progress);
 				}
-				IPath destPath = destFolder.getFile(srcFile.getName()).getLocation();
-				//IFile destFile = project.getFile(destPath);
-				IFile destFile = destFolder.getFile(srcFile.getName());
+				IFile destFile = rtsTopFolder.getFile(srcFile.getName());
 				if ( !destFile.isAccessible() ) {
 					destFile.create(null, true, progress);
-					System.out.println(destFile.getName() + " is created.");
 				}
-
 				FileChannel srcChannel  = new FileInputStream(srcFile.getAbsolutePath()).getChannel();
-				FileChannel destChannel = new FileOutputStream(destPath.toString()).getChannel();
+				FileChannel destChannel = new FileOutputStream(destFile.getLocation().toString()).getChannel();
 				try {
 					srcChannel.transferTo(0, srcChannel.size(), destChannel);
 				} finally {
 					srcChannel.close();
 					destChannel.close();
 				}
+				
+				// create a script directory
+				IFolder scriptFolder = rtsTopFolder.getFolder("scripts");
+				if ( !scriptFolder.exists() ) {
+					scriptFolder.create(true, true, progress);
+				}
+				
+				// create a result directory
+				IFolder resultFolder = rtsTopFolder.getFolder("results");
+				if ( !resultFolder.exists() ) {
+					resultFolder.create(true, true, progress);
+				}
+				
 			} catch (Exception ex) {
 				ex.printStackTrace();
 			}

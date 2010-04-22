@@ -394,6 +394,7 @@ public class BenchmarkOperatorView extends ViewPart {
 			e.printStackTrace();
 		} catch (Exception e) {
 			System.out.println("EC:" + ecModel.getName() + " is not available.");
+			e.printStackTrace();
 		} finally {
 			GrxRTMUtil.releaseObject(rnc);
 			GrxRTMUtil.releaseObject(rtc);
@@ -417,7 +418,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	
 	private void execPython(String fname)
 	{
-		//IProject proj = getProject("RealtimeSystemConfigurator");
+		IProject proj = BenchmarkResultExplorer.getInstance().getProject();
 		try {
 			Process p = Runtime.getRuntime().exec(new String[]{"python", "-m", "test"}, new String[]{"PYTHONPATH=/home/kawasumi/project/hrpsysRTM/src/hrpsys3/grx/REFHW/scripts"});
 			BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));

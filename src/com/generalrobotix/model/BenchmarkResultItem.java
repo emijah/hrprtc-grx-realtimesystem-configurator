@@ -2,6 +2,7 @@ package com.generalrobotix.model;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -11,12 +12,12 @@ import RTC.TimedState;
 
 public class BenchmarkResultItem extends TreeModelItem 
 { 
-	private static final String PROPERTY_DATE = "Date";
-	private static final String PROPERTY_DATACOUNT = "dataCount";
-	private static final String PROPERTY_MAX_DURATION  = "Max. duration";
-	private static final String PROPERTY_MIN_DURATION  = "Min. duration";
-	private static final String PROPERTY_MEAN_DURATION = "Ave. duration";
-	private static final String PROPERTY_STDDEV_DURATION = "stddev duration";
+	public static final String PROPERTY_DATE = "Date";
+	public static final String PROPERTY_DATACOUNT = "dataCount";
+	public static final String PROPERTY_MAX_DURATION  = "Max. duration";
+	public static final String PROPERTY_MIN_DURATION  = "Min. duration";
+	public static final String PROPERTY_MEAN_DURATION = "Ave. duration";
+	public static final String PROPERTY_STDDEV_DURATION = "stddev duration";
 	
 	public static final String PROPERTY_CPU_TYPE = "CPU Type";
 	public static final String PROPERTY_CPU_NUM = "CPU Num.";
@@ -36,6 +37,7 @@ public class BenchmarkResultItem extends TreeModelItem
 	public double stddev = 0;
 	public double cycle = 0;
 	public List<Double> lastLog_ = new ArrayList<Double>();
+	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
 
 	public BenchmarkResultItem() 
 	{
@@ -78,6 +80,7 @@ public class BenchmarkResultItem extends TreeModelItem
 	{
 		TimedState[] log = namedLog.log;
 		List<Double> lastLog = new ArrayList<Double>();
+		double lastT = ( lastLog_ != null && lastLog_.size() > 0 ) ? lastLog_.get(lastLog_.size() - 2) : 0;
 		stddev = Math.pow(stddev, 2);
 		for (int i=0; i<log.length; i++) {
 			int pos1 = namedLog.endPoint + i;
@@ -85,22 +88,19 @@ public class BenchmarkResultItem extends TreeModelItem
 				pos1 -= log.length;
 			}
 			int pos2 = ( pos1 == log.length-1 ) ? 0 : pos1+1;
-			
-			if ( log[pos1].data == 1 && log[pos2].data == 2) {
-				double t1 = log[pos1].tm.sec + log[pos1].tm.nsec*1.0e-9;
-				double t2 = log[pos2].tm.sec + log[pos2].tm.nsec*1.0e-9;
-				double diff = t2 - t1;
-				if ( diff < 0 || (lastLog.size() > 0 && t1 <= lastLog.get(lastLog.size() - 1)) ) {
-					continue;
+			double t1 = log[pos1].tm.sec + log[pos1].tm.nsec*1.0e-9;
+			if ( lastT < t1 && log[pos1].data == 1 && log[pos2].data == 2) {
+				double diff = log[pos2].tm.sec + log[pos2].tm.nsec*1.0e-9 - t1;
+				if ( diff > 0 ) {
+					max = Math.max(max, diff);
+					min = Math.min(min, diff);
+					mean = (mean*count + diff)/(count + 1);
+					stddev = (stddev*count + Math.pow(diff-mean, 2))/(count + 1);
+					count ++;
+					i++;
+					lastLog.add(t1);
+					lastLog.add(diff);
 				}
-				max = Math.max(max, diff);
-				min = Math.min(min, diff);
-				mean = (mean*count + diff)/(count + 1);
-				stddev = (stddev*count + Math.pow(diff-mean, 2))/(count + 1);
-				count ++;
-				i++;
-				lastLog.add(t1);
-				lastLog.add(diff);
 			}
 		}
 		if ( lastLog.size() > 0 ) {
@@ -161,5 +161,20 @@ public class BenchmarkResultItem extends TreeModelItem
 		min  += result.min;
 		mean += result.mean;
 		updateProperties();
+	}
+	
+	public Object getPropertyValue(Object id)
+	{
+		return properties.get(id);
+	}
+
+	public void setPropertyValue(Object id, Object value)
+	{
+		properties.put(id, value);		
+	}
+	
+	public Map<Object, Object> getPropertyMap()
+	{
+		return properties;
 	}
 }
