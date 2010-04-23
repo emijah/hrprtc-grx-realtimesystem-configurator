@@ -498,7 +498,10 @@ public class BenchmarkOperatorView extends ViewPart {
 	{
 		IProject proj = BenchmarkResultExplorer.getInstance().getProject();
 		try {
-			Process p = Runtime.getRuntime().exec(new String[]{"python", "-m", "test"}, new String[]{"PYTHONPATH=/home/kawasumi/project/hrpsysRTM/src/hrpsys3/grx/REFHW/scripts"});
+			String pythonPath = "/home/kawasumi/project/hrpsysRTM/src/hrpsys3/grx/REFHW/scripts";
+			String[] command = new String[]{"python", "-m", "test", cmbRobotHost_.getText()};
+			String[] props = new String[]{"PYTHONPATH=" + pythonPath};
+			Process p = Runtime.getRuntime().exec(command, props);
 			BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
 			PrintStream ps = new PrintStream(p.getOutputStream());
