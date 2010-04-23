@@ -24,16 +24,21 @@ import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
+import org.eclipse.swt.events.KeyEvent;
+import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
+import org.eclipse.swt.layout.RowData;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Combo;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Display;
+import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
@@ -65,20 +70,25 @@ import com.generalrobotix.model.TreeModelItem;
 import com.generalrobotix.ui.util.GrxRTMUtil;
 
 public class BenchmarkOperatorView extends ViewPart {
-	private int robotPort_ = 2809;
 	private RTSystemItem currentSystem;
+	
 	private TreeViewer rtsViewer;
-	private Button chkAutoUpdate;
-	private static final DecimalFormat FORMAT_MSEC = new DecimalFormat(" 0.000;-0.000");
-	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
-	private Text txtRobotHost_;
+	private Button btnUpdate;
+	private Combo cmbInterval_;
+	private Combo cmbRobotHost_;
+	
+	private int robotPort_ = 2809;
+	private int loggingInterval_ = DEFAULT_LOGGING_INTERVAL;
+	
     private static Color white_;
     private static Color black_;
     private static Color red_;
     private static Color yellow_;
     
-	ArrayList<IPropertyChangeListener> myListeners;
-
+    private static final int DEFAULT_LOGGING_INTERVAL = 1000;
+	private static final DecimalFormat FORMAT_MSEC = new DecimalFormat(" 0.000;-0.000");
+	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+    
 	public BenchmarkOperatorView()
 	{
 		white_ = Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
@@ -87,11 +97,6 @@ public class BenchmarkOperatorView extends ViewPart {
 		yellow_ = Display.getDefault().getSystemColor(SWT.COLOR_DARK_MAGENTA);//.COLOR_YELLOW);
 	}
 	
-	public void addPropertyChangeListener(IPropertyChangeListener listener) {
-		if(!myListeners.contains(listener))
-			myListeners.add(listener);
-	}
-
 	@Override
 	public void createPartControl(Composite parent)
 	{		
@@ -107,7 +112,8 @@ public class BenchmarkOperatorView extends ViewPart {
 		btnStartup.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {}
 
-			public void widgetSelected(SelectionEvent e) {
+			public void widgetSelected(SelectionEvent e)
+			{
 				//setupRTSystem();
 				execPython(null);
 			}	
@@ -118,50 +124,58 @@ public class BenchmarkOperatorView extends ViewPart {
 		btnReset.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {}
 
-			public void widgetSelected(SelectionEvent e) {
-				resetLogs();
+			public void widgetSelected(SelectionEvent e)
+			{
+				resetLogAction();
 				rtsViewer.refresh();
 			}	
 		});
 		
-		final Button btnUpdate = new Button(btnPanel, SWT.NONE);
+		btnUpdate = new Button(btnPanel, SWT.TOGGLE);
 		btnUpdate.setText("Update Log");
 		btnUpdate.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {}
-
-			public void widgetSelected(SelectionEvent e) {
-				updateLog();
-				rtsViewer.refresh();
-				TimingChartView.getInstance().updateCharts();
-			}	
-		});
-		
-	    chkAutoUpdate = new Button(btnPanel, SWT.CHECK);
-	    chkAutoUpdate.setText("auto");
-		chkAutoUpdate.addSelectionListener(new SelectionListener() {
-			public void widgetDefaultSelected(SelectionEvent e) {
-			}
-
-			public void widgetSelected(SelectionEvent e) {
+			
+			public void widgetSelected(SelectionEvent e)
+			{
 				if ( ((Button)e.getSource()).getSelection() ) {
-					btnUpdate.setEnabled(false);
+					resetLastLogs();
 					Display display = Display.getCurrent();
 					if ( !display.isDisposed() ) {
-						display.timerExec(1000, new UpdateLogThread());
+						display.timerExec(100, new UpdateLogThread());
 					}
-				} else {
-					btnUpdate.setEnabled(true);
 				}
 			}	
 		});
 		
-		txtRobotHost_ = new Text(btnPanel, SWT.NONE);
-		txtRobotHost_.setSize(200, 30);
-		txtRobotHost_.setText("localhost");
+		Label lblInterval = new Label(btnPanel, SWT.NONE);
+		lblInterval.setText("Interval:");
 		
+		cmbInterval_ = new Combo(btnPanel, SWT.NONE | SWT.READ_ONLY);
+		for (int i=0; i<10; i++) {
+			cmbInterval_.add(Integer.toString(500 + i*100)+" [ms]");
+			cmbInterval_.select((DEFAULT_LOGGING_INTERVAL-500)/100);
+		}
+		cmbInterval_.addSelectionListener(new SelectionListener() {
+			@Override
+			public void widgetDefaultSelected(SelectionEvent e) {}
+
+			@Override
+			public void widgetSelected(SelectionEvent e) {
+				loggingInterval_ = Integer.parseInt(cmbInterval_.getText().split(" ")[0]);
+			}
+		});
+		
+		Label lblRobotHost = new Label(btnPanel, SWT.NONE);
+		lblRobotHost.setText("Host:");
+		cmbRobotHost_ = new Combo(btnPanel, SWT.NONE);
+		cmbRobotHost_.add("localhost");
+		cmbRobotHost_.select(0);
+
 		// Catch selection event from BenchmarkResultExplorer
 		getSite().getPage().addSelectionListener(new ISelectionListener() {
-	        public void selectionChanged(IWorkbenchPart sourcepart, ISelection selection) {
+	        public void selectionChanged(IWorkbenchPart sourcepart, ISelection selection) 
+	        {
 	        	if (sourcepart != BenchmarkOperatorView.this && selection instanceof IStructuredSelection) {
 	        		List sel = ((IStructuredSelection) selection).toList();
 	        		if ( sel.size() > 0 && sel.get(0) instanceof RTSystemItem ) {
@@ -172,7 +186,6 @@ public class BenchmarkOperatorView extends ViewPart {
 	            }
 	        }
 	    });
-		//getSite().setSelectionProvider(rtsViewer);
 	}
 
 	@Override
@@ -182,28 +195,29 @@ public class BenchmarkOperatorView extends ViewPart {
 	
 	class ViewContentProvider implements ITreeContentProvider
 	{
-		public void inputChanged(Viewer v, Object oldInput, Object newInput) {
-		}
+		public void inputChanged(Viewer v, Object oldInput, Object newInput) {}
+		public void dispose() {}
 		
-		public void dispose() {
-		}
-		
-		public Object[] getElements(Object parent) {
+		public Object[] getElements(Object parent)
+		{
 			if ( parent instanceof RTSystemItem ) {
 				return ((RTSystemItem)parent).getChildren().toArray();
 			}
 			return null;
 		}
 		
-		public Object[] getChildren(Object parentElement) {
+		public Object[] getChildren(Object parentElement)
+		{
 			return ((TreeModelItem)parentElement).getChildren().toArray();
 		}
 		
-		public Object getParent(Object element) {
+		public Object getParent(Object element)
+		{
 			return ((TreeModelItem)element).getParent();
 		}
 		
-		public boolean hasChildren(Object element) {
+		public boolean hasChildren(Object element)
+		{
 			return (((TreeModelItem)element).getChildren().size() > 0);
 		}
 	}
@@ -381,20 +395,60 @@ public class BenchmarkOperatorView extends ViewPart {
 		}
 	}
 	
-	private void updateLog()
+	private void resetLogAction() 
 	{
 		if ( currentSystem != null ) {
 			Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
 			while ( it.hasNext() ) {
-				RTComponentItem model = it.next();
-				if ( model instanceof ExecutionContextItem ) {
-					benchmarkTest((ExecutionContextItem)model);
-				}
+				it.next().getResult().reset();
 			}
 		}
 	}
 	
-	private void benchmarkTest(ExecutionContextItem ecModel)
+	private void resetLastLogs() 
+	{
+		if ( currentSystem != null ) {
+			Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
+			while ( it.hasNext() ) {
+				it.next().getResult().resetLastLog();
+			}
+		}
+	}
+
+	public class UpdateLogThread implements Runnable
+	{
+		public void run() {
+			try {
+				updateLogAction();
+				Display display = Display.getCurrent();
+				if ( !display.isDisposed() && btnUpdate.getSelection() ) {
+					display.timerExec(loggingInterval_, this);
+				}
+			} catch (Exception ex) {
+				ex.printStackTrace();
+			}
+		}
+	}
+	
+	private boolean updateLogAction()
+	{
+		boolean ret = false;
+		if ( currentSystem != null ) {
+			Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
+			String hostName = cmbRobotHost_.getText();
+			while ( it.hasNext() ) {
+				RTComponentItem model = it.next();
+				if ( model instanceof ExecutionContextItem ) {
+					ret |= updateLog((ExecutionContextItem)model, hostName);
+				}
+			}
+			rtsViewer.refresh();
+			TimingChartView.getInstance().updateCharts();
+		}
+		return ret;
+	}
+	
+	private boolean updateLog(ExecutionContextItem ecModel, String hostName)
 	{
 		NamingContext rnc = null;
 		RTObject rtc = null;
@@ -402,7 +456,7 @@ public class BenchmarkOperatorView extends ViewPart {
 		try {
 			// get information from target system
 			double cycle = 1.0/ecModel.getRate();
-			rnc = GrxRTMUtil.getRootNamingContext(txtRobotHost_.getText()/*ecModel.getHostName()*/, robotPort_);
+			rnc = GrxRTMUtil.getRootNamingContext(hostName, robotPort_);
 			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
 			bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
 			NamedStateLog[] logs = bmSVC.get_logs();
@@ -422,6 +476,7 @@ public class BenchmarkOperatorView extends ViewPart {
 				}
 			}
 			ecModel.calcSummation();
+			return true;
 		} catch (InvalidParameter e) {
 			e.printStackTrace();
 		} catch (NotAvailable e) {
@@ -436,20 +491,7 @@ public class BenchmarkOperatorView extends ViewPart {
 			GrxRTMUtil.releaseObject(rtc);
 			GrxRTMUtil.releaseObject(bmSVC);
 		}
-	}
-	
-	private void resetLogs() 
-	{
-		if ( currentSystem != null ) {
-			Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
-			while ( it.hasNext() ) {
-				RTComponentItem model = it.next();
-				BenchmarkResultItem result = model.getResult();
-				if ( result != null) {
-					result.reset();
-				}
-			}
-		}
+		return false;
 	}
 	
 	private void execPython(String fname)
@@ -466,37 +508,6 @@ public class BenchmarkOperatorView extends ViewPart {
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
-		}
-	}
-	
-	/*public IProject getProject(String projectName)
-	{
-		IProject ret = ResourcesPlugin.getWorkspace().getRoot().getProject(projectName);
-		if ( !ret.exists() ) {
-			try {
-				ret.create(null);
-				ret.open(null);
-			} catch (CoreException e) {
-				e.printStackTrace();
-			}
-		}
-		return ret;
-	}*/
-	
-	public class UpdateLogThread implements Runnable
-	{
-		public void run() {
-			try {
-				updateLog();
-				rtsViewer.refresh();
-				TimingChartView.getInstance().updateCharts();
-				Display display = Display.getCurrent();
-				if ( !display.isDisposed() && chkAutoUpdate.getSelection() ) {
-					display.timerExec(1000, this);
-				}
-			} catch (Exception ex) {
-				ex.printStackTrace();
-			}
 		}
 	}
 }
