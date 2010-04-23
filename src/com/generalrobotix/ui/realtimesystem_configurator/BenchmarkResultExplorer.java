@@ -25,7 +25,6 @@ import org.eclipse.core.resources.IProject;
 import org.eclipse.core.resources.IResource;
 import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
-import org.eclipse.core.runtime.IPath;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.action.IMenuListener;
@@ -185,6 +184,8 @@ public class BenchmarkResultExplorer extends ViewPart
 								while(rtcs.hasNext()) {
 									RTComponentItem rtc = rtcs.next();
 									rtc.setResult(ret.get(rtc.getId()));
+									double cycle = 1.0/rtc.getComponent().getExecutionContexts().get(0).getRate();
+									rtc.getResult().setCycle(cycle);
 								}
 							}
 						}
