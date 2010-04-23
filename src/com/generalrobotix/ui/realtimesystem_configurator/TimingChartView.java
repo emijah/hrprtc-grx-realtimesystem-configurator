@@ -21,6 +21,7 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.data.Range;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.experimental.chart.swt.ChartComposite;
@@ -40,13 +41,17 @@ public class TimingChartView extends ViewPart
 	private static final int SHOW_AVERAGE = 2;
 	private static final String[] SHOW_MODE_LABELS = new String[]{"last period", "worst one", "average"};
 	private int showMode = LAST_PERIOD;
-	private Action action1;
+	private Action actChangeMode;
+	private Action actMoveRangeRight;
+	private Action actMoveRangeLeft;
+	private Action actMoveRangeRight2;
+	private Action actMoveRangeLeft2;
 	private static TimingChartView this_;
 	private TreeModelItem selectedItem_;
 	
 	private static final double SEC2MSEC = 1000.0;
 	private static final double TRANSITION = 0.000000001;
-	private static final double DEFAULT_MAX_VALUE_RANGE = 3.0;
+	private static final double DEFAULT_MAX_VALUE_RANGE = 4.0;
 	
 	private Text txtPlatFromInfo;
 	
@@ -75,15 +80,66 @@ public class TimingChartView extends ViewPart
 			}
 		});
 		
-		action1 = new Action(SHOW_MODE_LABELS[2], Action.AS_PUSH_BUTTON) {
+		actMoveRangeLeft2 = new Action("<<", Action.AS_PUSH_BUTTON) {
+			public void run() {
+				for (int i=0; i<chartList.size(); i++) {
+					ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
+					double l = xaxis.getLowerBound();
+					double u = xaxis.getUpperBound();
+					double r = (u-l)*0.1;
+					xaxis.setRange(l-r, u-r);
+				}
+			}
+		};
+		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeLeft2);
+		
+		actMoveRangeLeft = new Action("<", Action.AS_PUSH_BUTTON) {
+			public void run() {
+				for (int i=0; i<chartList.size(); i++) {
+					ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
+					double l = xaxis.getLowerBound();
+					double u = xaxis.getUpperBound();
+					double r = (u-l)*0.01;
+					xaxis.setRange(l-r, u-r);
+				}
+			}
+		};
+		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeLeft);
+		
+		actMoveRangeRight = new Action(">", Action.AS_PUSH_BUTTON) {
+			public void run() {
+				for (int i=0; i<chartList.size(); i++) {
+					ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
+					double l = xaxis.getLowerBound();
+					double u = xaxis.getUpperBound();
+					double r = (u-l)*0.01;
+					xaxis.setRange(l+r, u+r);
+				}
+			}
+		};
+		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeRight);
+		
+		actMoveRangeRight2 = new Action(">>", Action.AS_PUSH_BUTTON) {
+			public void run() {
+				for (int i=0; i<chartList.size(); i++) {
+					ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
+					double l = xaxis.getLowerBound();
+					double u = xaxis.getUpperBound();
+					double r = (u-l)*0.1;
+					xaxis.setRange(l+r, u+r);
+				}
+			}
+		};
+		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeRight2);
+		
+		actChangeMode = new Action(SHOW_MODE_LABELS[showMode], Action.AS_PUSH_BUTTON) {
 			public void run() {
 				changeShowMode();
-				action1.setText(SHOW_MODE_LABELS[showMode]);
+				actChangeMode.setText(SHOW_MODE_LABELS[showMode]);
 				updateCharts();
 			}
 		};
-		action1.setText(SHOW_MODE_LABELS[showMode]);
-		getViewSite().getActionBars().getToolBarManager().add(action1);
+		getViewSite().getActionBars().getToolBarManager().add(actChangeMode);
 	}
 	
 	private void changeShowMode() 
@@ -130,10 +186,9 @@ public class TimingChartView extends ViewPart
 			}
 			return;
 		}
-		double downStateValue = 1.0;
-		double upStateValue   = 2.0;
+		double downStateValue = 0.5;
+		double upStateValue   = 1.0;
 		double cycle = 1.0/item.getRate()*SEC2MSEC;
-		double lastValue = 0;
 		JFreeChart chart = chartList.get(index).getChart();
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
 		chart.setTitle("EC : "+item.getName());
@@ -162,6 +217,7 @@ public class TimingChartView extends ViewPart
 				XYSeries xyseries = new XYSeries(rtc.getName());
 				List<Double> log = rtc.getResult().lastLog_;
 				if ( log.size() > 0 ) {
+					xyseries.add(-TRANSITION, downStateValue);
 					for (int i=0; i<log.size(); i+=2) {
 						double t1 = (log.get(i) - offset)*SEC2MSEC;
 						double t2 = t1 + log.get(i+1)*SEC2MSEC;
@@ -172,40 +228,48 @@ public class TimingChartView extends ViewPart
 					}
 				}
 				dataset.addSeries(xyseries);
+				downStateValue += 1;
+				upStateValue += 1;
 			}
 		} else {
 			double t1 = 0;
 			while ( rtcs.hasNext() ) {
 				RTComponentItem rtc = (RTComponentItem)rtcs.next();
-				double duration = 0;
-				if ( showMode == SHOW_WORST ) {
-					duration = rtc.getResult().max*SEC2MSEC;
-				} else {
-					duration = rtc.getResult().mean*SEC2MSEC;
-				}
-				
+				double t2 = t1 + ((showMode == SHOW_WORST) ? rtc.getResult().max*SEC2MSEC : rtc.getResult().mean*SEC2MSEC);
 				XYSeries xyseries = new XYSeries(rtc.getName());
+				xyseries.add(-TRANSITION, downStateValue);
 				xyseries.add(t1-TRANSITION, downStateValue);
 				xyseries.add(t1, upStateValue);
-				t1 += duration;
-				xyseries.add(t1, upStateValue);
-				xyseries.add(t1+TRANSITION, downStateValue);
+				xyseries.add(t2, upStateValue);
+				xyseries.add(t2+TRANSITION, downStateValue);
 				dataset.addSeries(xyseries);
+				downStateValue += 1;
+				upStateValue += 1;
 			}
 		}
 		
+		// add cycle
 		double tmax = dataset.getDomainUpperBound(false);
 		List<XYSeries> list = dataset.getSeries();
 		XYSeries cycleSeries = list.get(0);
 		for (double v=0; v<tmax+cycle ; v += cycle) {
 			cycleSeries.add(v-TRANSITION, 0);
-			cycleSeries.add(v, DEFAULT_MAX_VALUE_RANGE);
+			cycleSeries.add(v, downStateValue);//DEFAULT_MAX_VALUE_RANGE);
 			cycleSeries.add(v+TRANSITION, 0);
 		}
 		
+		XYPlot xyplot = chart.getXYPlot();
+		ValueAxis yAxis = xyplot.getRangeAxis();
+		yAxis.setRange(0.0, downStateValue);
+		
+		// extends line
+		downStateValue = 0.5;
+		upStateValue   = 1.0;
 		for (int i=1; i<list.size(); i++) {
 			XYSeries s = list.get(i);
 			s.add((int)(tmax/cycle)*cycle+cycle, downStateValue);
+			downStateValue += 1;
+			upStateValue += 1;
 		}
 		parent.update();
 	}
