@@ -12,7 +12,6 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Group;
 import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
@@ -213,9 +212,7 @@ public class TimingChartView extends ViewPart
 	
 	private ChartComposite createChart(Composite parent)
 	{
-		//JFreeChart chart = ChartFactory.createXYStepAreaChart("NO DATA", XAXIS_LABEL,
-				//null, null, PlotOrientation.VERTICAL, true, true, false);
-		JFreeChart chart = ChartFactory.createXYLineChart("NO DATA", "XAXIS_LABEL",
+		JFreeChart chart = ChartFactory.createXYLineChart("NO DATA", XAXIS_LABEL,
 				null, null, PlotOrientation.VERTICAL, true, true, false);
 
 		XYPlot xyplot = chart.getXYPlot();
