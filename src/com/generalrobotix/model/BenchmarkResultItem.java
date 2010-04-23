@@ -102,7 +102,7 @@ public class BenchmarkResultItem extends TreeModelItem
 					i++;
 					lastLog_.add(t1);
 					lastLog_.add(diff);
-					while ( lastLog_.size() > log.length * 2) {
+					while ( lastLog_.size() > log.length-2) {
 						lastLog_.remove(0);
 						lastLog_.remove(0);
 					}
