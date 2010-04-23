@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -14,12 +13,11 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.eclipse.core.resources.IProject;
-import org.eclipse.core.resources.ResourcesPlugin;
-import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
+import org.eclipse.jface.viewers.ITableColorProvider;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
@@ -28,6 +26,7 @@ import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
+import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -44,7 +43,6 @@ import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.omg.CosNaming.NamingContext;
 import org.openrtp.namespaces.rts.version02.Component;
-import org.openrtp.namespaces.rts.version02.Dataport;
 import org.openrtp.namespaces.rts.version02.DataportConnector;
 import org.openrtp.namespaces.rts.version02.ExecutionContext;
 import org.openrtp.namespaces.rts.version02.TargetPort;
@@ -55,7 +53,6 @@ import OpenRTM.NamedStateLog;
 import OpenRTM.PlatformInfo;
 import RTC.RTObject;
 import RTM.Manager;
-import RTM.ModuleProfile;
 import _SDOPackage.InternalError;
 import _SDOPackage.InvalidParameter;
 import _SDOPackage.NotAvailable;
@@ -75,11 +72,19 @@ public class BenchmarkOperatorView extends ViewPart {
 	private static final DecimalFormat FORMAT_MSEC = new DecimalFormat(" 0.000;-0.000");
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 	private Text txtRobotHost_;
-	
+    private static Color white_;
+    private static Color black_;
+    private static Color red_;
+    private static Color yellow_;
+    
 	ArrayList<IPropertyChangeListener> myListeners;
 
 	public BenchmarkOperatorView()
 	{
+		white_ = Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
+		black_ = Display.getDefault().getSystemColor(SWT.COLOR_BLACK);
+		red_ = Display.getDefault().getSystemColor(SWT.COLOR_RED);
+		yellow_ = Display.getDefault().getSystemColor(SWT.COLOR_DARK_MAGENTA);//.COLOR_YELLOW);
 	}
 	
 	public void addPropertyChangeListener(IPropertyChangeListener listener) {
@@ -203,9 +208,10 @@ public class BenchmarkOperatorView extends ViewPart {
 		}
 	}
 	
-	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider
+	class ViewLabelProvider extends LabelProvider implements ITableLabelProvider, ITableColorProvider
 	{
-		public String getColumnText(Object obj, int index) {
+		public String getColumnText(Object obj, int index)
+		{
 			try {				
 				RTComponentItem model = (RTComponentItem)obj;
 				BenchmarkResultItem result = model.getResult();
@@ -213,7 +219,7 @@ public class BenchmarkOperatorView extends ViewPart {
 				List<ExecutionContext> eclist = comp.getExecutionContexts();
 				switch(index) {
 				case 0: return eclist.size() > 0 ? (model.getName() + ":" + eclist.get(0).getId()) : (model.getName());
-				case 1: return eclist.size() > 0 ? (String.valueOf((int)(1.0/eclist.get(0).getRate()*1000))) : ("");
+				case 1: return FORMAT_MSEC.format(result.cycle*1000.0);//eclist.size() > 0 ? (String.valueOf((int)(1.0/eclist.get(0).getRate()*1000))) : ("");
 				case 2: return FORMAT_MSEC.format(result.max*1000.0);
 				case 3: return FORMAT_MSEC.format(result.mean*1000.0);
 				case 4: return String.valueOf(result.count);
@@ -225,20 +231,48 @@ public class BenchmarkOperatorView extends ViewPart {
 			}
 			return "";
 		}
-		/*public Image getColumnImage(Object obj, int index) {
-			return getImage(obj);
+
+		@Override
+		public Color getForeground(Object element, int columnIndex)
+		{
+			if ( columnIndex == 2 ) {
+				RTComponentItem model = (RTComponentItem)element;
+				BenchmarkResultItem result = model.getResult();
+				double val = result.max;
+				if ( result.cycle < val ) {
+					return red_;
+				} else if ( result.cycle < val * 2 ){
+					return yellow_;
+				}
+			} else  if ( columnIndex == 3 ) {
+				RTComponentItem model = (RTComponentItem)element;
+				BenchmarkResultItem result = model.getResult();
+				double val = result.mean;
+				if ( result.cycle < val ) {
+					return red_;
+				} else if ( result.cycle < val * 2 ){
+					return yellow_;
+				}
+			}
+			return black_;
 		}
-		public Image getImage(Object obj) {
-			return null;//PlatformUI.getWorkbench().getSharedImages().getImage(ISharedImages.IMG_OBJ_ELEMENT);
-		}*/
-		public Image getColumnImage(Object obj, int index) {
+		
+		@Override
+		public Color getBackground(Object element, int columnIndex)
+		{
+			return null;
+		}
+		
+		public Image getColumnImage(Object obj, int index)
+		{
 			if ( index == 0 ) {
 				return getImage(obj);
 			}
 			return null;
 		}
 		
-	    public Image getImage(Object element) {
+	    public Image getImage(Object element)
+	    {
 	        if (element instanceof TreeModelItem) {
 	            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), ((TreeModelItem)element).getIconPath());
 	            return cacheImage(desc);
@@ -247,7 +281,8 @@ public class BenchmarkOperatorView extends ViewPart {
 	    }
 	    
 	    private HashMap<ImageDescriptor, Image> imageMap;
-		Image cacheImage(ImageDescriptor desc) {
+		Image cacheImage(ImageDescriptor desc) 
+		{
 			if ( imageMap == null ) {
 				imageMap = new HashMap<ImageDescriptor, Image>();
 			}
@@ -259,7 +294,8 @@ public class BenchmarkOperatorView extends ViewPart {
 	        return image;
 	    }
 
-	    public void dispose() {
+	    public void dispose()
+	    {
 	        if (imageMap != null) {
 	        	Iterator<Image> images = imageMap.values().iterator();
 	            while (images.hasNext()) {
