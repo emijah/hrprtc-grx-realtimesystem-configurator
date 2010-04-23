@@ -153,6 +153,11 @@ public class BenchmarkResultItem extends TreeModelItem
 		updateProperties();
 	}
 	
+	public void resetLastLog()
+	{
+		lastLog_.clear();
+	}
+	
 	public void plus(BenchmarkResultItem result)
 	{
 		if ( count < result.count ) {
