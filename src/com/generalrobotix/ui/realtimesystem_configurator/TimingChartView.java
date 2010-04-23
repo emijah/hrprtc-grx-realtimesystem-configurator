@@ -12,6 +12,8 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
+import org.eclipse.swt.widgets.Group;
+import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
@@ -28,7 +30,8 @@ import com.generalrobotix.model.ExecutionContextItem;
 import com.generalrobotix.model.RTComponentItem;
 import com.generalrobotix.model.TreeModelItem;
 
-public class TimingChartView extends ViewPart {
+public class TimingChartView extends ViewPart
+{
 	private List<ChartComposite> chartList = new ArrayList<ChartComposite>();
 	private Composite parent;
 	private static final int INITIAL_CHART_NUM = 3;
@@ -42,12 +45,20 @@ public class TimingChartView extends ViewPart {
 	private static TimingChartView this_;
 	private TreeModelItem selectedItem_;
 	
-	public TimingChartView() {
+	private static final double SEC2MSEC = 1000.0;
+	private static final double TRANSITION = 0.000000001;
+	private static final double DEFAULT_MAX_VALUE_RANGE = 3.0;
+	
+	private Text txtPlatFromInfo;
+	
+	public TimingChartView()
+	{
 		this_ = this;
 	}
 	
 	@Override
-	public void createPartControl(final Composite parent) {
+	public void createPartControl(final Composite parent)
+	{
 		this.parent = parent;//new Composite(parent, SWT.V_SCROLL);
 		this.parent.setLayout( new GridLayout(1, false));
 		
@@ -84,7 +95,8 @@ public class TimingChartView extends ViewPart {
 		}
 	}
 	
-	synchronized public void updateCharts() {
+	synchronized public void updateCharts()
+	{
 		TreeModelItem root = selectedItem_.getRoot();
 		Iterator<TreeModelItem> checkedItems = root.getCheckedItems().iterator();
 		int index = 0;
@@ -98,7 +110,8 @@ public class TimingChartView extends ViewPart {
 		updateChart(null, index, false);
 	}
 	
-	private void updateChart(ExecutionContextItem item, int index, boolean isSelected) {
+	private void updateChart(ExecutionContextItem item, int index, boolean isSelected)
+	{
 		while ( chartList.size() < index + 1 || chartList.size() < INITIAL_CHART_NUM ) {
 			chartList.add(createChart(parent));
 		}
@@ -114,16 +127,22 @@ public class TimingChartView extends ViewPart {
 					chart.setBackgroundPaint(Color.white);
 					chart.setTitle("NO DATA");
 					chart.getXYPlot().getDomainAxis().setUpperBound(5.2);
-					createIndigator(chart, "cycle", 0.005);
 				}
 			}
 			return;
 		}
-
+		double downStateValue = 1.0;
+		double upStateValue   = 2.0;
+		double cycle = 1.0/item.getRate()*SEC2MSEC;
+		double lastValue = 0;
 		JFreeChart chart = chartList.get(index).getChart();
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
 		chart.setTitle("EC : "+item.getName());
-		XYSeriesCollection dataset = createIndigator(chart, "cycle", 1.0/item.getRate()*1000.0);
+		
+		XYSeriesCollection dataset = new XYSeriesCollection();
+		dataset.addSeries(new XYSeries("cycle"));
+		chart.getXYPlot().setDataset(dataset);
+		
 		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
 		if ( showMode == LAST_PERIOD ) {
 			double offset = -1;
@@ -145,11 +164,12 @@ public class TimingChartView extends ViewPart {
 				List<Double> log = rtc.getResult().lastLog_;
 				if ( log.size() > 0 ) {
 					for (int i=0; i<log.size(); i+=2) {
-						double t1 = log.get(i) - offset;
-						double t2 = t1 + log.get(i+1);
-						xyseries.add(t1*1000.0, 1);
-						xyseries.add(t2*1000.0, 1);
-						xyseries.add((t2+0.0000001)*1000.0, 0);
+						double t1 = (log.get(i) - offset)*SEC2MSEC;
+						double t2 = t1 + log.get(i+1)*SEC2MSEC;
+						xyseries.add(t1-TRANSITION, downStateValue);
+						xyseries.add(t1, upStateValue);
+						xyseries.add(t2, upStateValue);
+						xyseries.add(t2+TRANSITION, downStateValue);
 					}
 				}
 				dataset.addSeries(xyseries);
@@ -158,48 +178,53 @@ public class TimingChartView extends ViewPart {
 			double t1 = 0;
 			while ( rtcs.hasNext() ) {
 				RTComponentItem rtc = (RTComponentItem)rtcs.next();
-				double t2 = 0;
+				double duration = 0;
 				if ( showMode == SHOW_WORST ) {
-					t2 = rtc.getResult().max*1000.0;
+					duration = rtc.getResult().max*SEC2MSEC;
 				} else {
-					t2 = rtc.getResult().mean*1000.0;
+					duration = rtc.getResult().mean*SEC2MSEC;
 				}
 				
 				XYSeries xyseries = new XYSeries(rtc.getName());
-				xyseries.add(t1, 1);
-				xyseries.add(t1+t2, 1);
-				t1 += t2;
+				xyseries.add(t1-TRANSITION, downStateValue);
+				xyseries.add(t1, upStateValue);
+				t1 += duration;
+				xyseries.add(t1, upStateValue);
+				xyseries.add(t1+TRANSITION, downStateValue);
 				dataset.addSeries(xyseries);
 			}
+		}
+		
+		double tmax = dataset.getDomainUpperBound(false);
+		List<XYSeries> list = dataset.getSeries();
+		XYSeries cycleSeries = list.get(0);
+		for (double v=0; v<tmax+cycle ; v += cycle) {
+			cycleSeries.add(v-TRANSITION, 0);
+			cycleSeries.add(v, DEFAULT_MAX_VALUE_RANGE);
+			cycleSeries.add(v+TRANSITION, 0);
+		}
+		
+		for (int i=1; i<list.size(); i++) {
+			XYSeries s = list.get(i);
+			s.add((int)(tmax/cycle)*cycle+cycle, downStateValue);
 		}
 		parent.update();
 	}
 	
-	public XYSeriesCollection createIndigator(JFreeChart chart, String name, double cycle) {
-		XYSeriesCollection dataset = new XYSeriesCollection();
-		XYSeries xyseries = new XYSeries(name);
-		xyseries.add(cycle-0.005, 2);
-		xyseries.add(cycle+0.005, 2);
-		dataset.addSeries(xyseries);
-		chart.getXYPlot().setDataset(dataset);
-		return dataset;
-	}
-	
-	private ChartComposite createChart(Composite parent) {
-		JFreeChart chart = ChartFactory.createXYStepAreaChart(
-				"NO DATA", XAXIS_LABEL, null, null, PlotOrientation.VERTICAL,
-				true,   // legend
-				true,   // tooltips
-				false   // urls
-		);
+	private ChartComposite createChart(Composite parent)
+	{
+		//JFreeChart chart = ChartFactory.createXYStepAreaChart("NO DATA", XAXIS_LABEL,
+				//null, null, PlotOrientation.VERTICAL, true, true, false);
+		JFreeChart chart = ChartFactory.createXYLineChart("NO DATA", "XAXIS_LABEL",
+				null, null, PlotOrientation.VERTICAL, true, true, false);
 
 		XYPlot xyplot = chart.getXYPlot();
 		xyplot.setBackgroundPaint(Color.white);
 		xyplot.setDomainGridlinePaint(Color.black);
 		xyplot.setDomainGridlinesVisible(true);
-		
+
 		ValueAxis yAxis = xyplot.getRangeAxis();
-		yAxis.setRange(0.0, 1.5);
+		yAxis.setRange(0.0, DEFAULT_MAX_VALUE_RANGE);
 		yAxis.setVisible(false);
 
 		ChartComposite chartComp = new ChartComposite(parent, SWT.NONE, chart, true);
@@ -209,10 +234,12 @@ public class TimingChartView extends ViewPart {
 	}
 
 	@Override
-	public void setFocus() {
+	public void setFocus()
+	{
 	}
 	
-	public static TimingChartView getInstance() {
+	public static TimingChartView getInstance()
+	{
 		return this_; // TODO update chart without this method
 	}
-}
+} 
