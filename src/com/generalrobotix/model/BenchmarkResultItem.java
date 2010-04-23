@@ -39,7 +39,7 @@ public class BenchmarkResultItem extends TreeModelItem
 	public List<Double> lastLog_ = new ArrayList<Double>();
 	
 	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
-	private static int LOG_CAPACITY = 1000;
+	private static int LOG_CAPACITY = 500;
 
 	public BenchmarkResultItem() 
 	{
@@ -102,7 +102,7 @@ public class BenchmarkResultItem extends TreeModelItem
 					i++;
 					lastLog_.add(t1);
 					lastLog_.add(diff);
-					while ( lastLog_.size() > LOG_CAPACITY ) {
+					while ( lastLog_.size() > log.length * 2) {
 						lastLog_.remove(0);
 						lastLog_.remove(0);
 					}
