@@ -95,7 +95,7 @@ public class TimingChartView extends ViewPart
 				zoomRange(0.9);
 			}
 		};
-		actZoomIn.setToolTipText("Zoom In & sync. graphs");
+		actZoomIn.setToolTipText("Zoom In && sync. graphs");
 		actZoomIn.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/zoomin.png"));
 		getViewSite().getActionBars().getToolBarManager().add(actZoomIn);
 		
@@ -104,7 +104,7 @@ public class TimingChartView extends ViewPart
 				zoomRange(1.1);
 			}
 		};
-		actZoomOut.setToolTipText("Zoom Out & sync. graphs");
+		actZoomOut.setToolTipText("Zoom Out && sync. graphs");
 		actZoomOut.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/zoomout.png"));
 		getViewSite().getActionBars().getToolBarManager().add(actZoomOut);
 		
@@ -142,6 +142,7 @@ public class TimingChartView extends ViewPart
 				changeShowMode();
 				actChangeMode.setText(SHOW_MODE_LABELS[showMode]);
 				updateCharts();
+				showAllValue();
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actChangeMode);
@@ -176,14 +177,16 @@ public class TimingChartView extends ViewPart
 		}
 	}
 	
-	private void showAllValue(int i)
+	private void showAllValue()
 	{
-		XYSeriesCollection dataset = (XYSeriesCollection) chartList.get(i).getChart().getXYPlot().getDataset();
-		double l = dataset.getDomainLowerBound(false);
-		double u = dataset.getDomainUpperBound(false);
-		double m = (u-l)*0.05;
-		ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
-		xaxis.setRange(l-m, u+m);
+		for (int i=0; i<chartList.size(); i++) {
+			XYSeriesCollection dataset = (XYSeriesCollection) chartList.get(i).getChart().getXYPlot().getDataset();
+			double l = dataset.getDomainLowerBound(false);
+			double u = dataset.getDomainUpperBound(false);
+			double m = (u-l)*0.05;
+			ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
+			xaxis.setRange(l-m, u+m);
+		}
 	}
 	
 	synchronized public void updateCharts()
@@ -309,7 +312,6 @@ public class TimingChartView extends ViewPart
 			upStateValue += 1;
 		}
 		
-		showAllValue(index);
 		parent.update();
 	}
 	
