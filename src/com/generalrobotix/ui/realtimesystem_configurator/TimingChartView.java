@@ -59,7 +59,7 @@ public class TimingChartView extends ViewPart
 	private static final double SEC2MSEC = 1000.0;
 	private static final double TRANSITION = 0.000000001;
 	private static final double DEFAULT_DOWNSTATE = 1.0;
-	private static final double DEFAULT_UPSTATE   = 1.5;
+	private static final double DEFAULT_UPSTATE   = 0.5;
 	private static final double DEFAULT_RANGE_MAX = 4.0;
 	private static final double DEFAULT_RANGE_MIN = 0.5;
 	
@@ -237,8 +237,8 @@ public class TimingChartView extends ViewPart
 			}
 			return;
 		}
-		double downStateValue = DEFAULT_DOWNSTATE;
-		double upStateValue   = DEFAULT_UPSTATE;
+		double downStateValue = DEFAULT_DOWNSTATE + item.getChildren().size() - 1;
+		double upStateValue   = downStateValue + DEFAULT_UPSTATE;
 		double cycle = 1.0/item.getRate()*SEC2MSEC;
 		JFreeChart chart = chartList.get(index).getChart();
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
@@ -280,8 +280,8 @@ public class TimingChartView extends ViewPart
 					}
 				}
 				dataset.addSeries(xyseries);
-				downStateValue += 1;
-				upStateValue += 1;
+				downStateValue -= 1;
+				upStateValue -= 1;
 			}
 		} else {
 			double t1 = 0;
@@ -295,8 +295,8 @@ public class TimingChartView extends ViewPart
 				xyseries.add(t1, upStateValue);
 				xyseries.add(t1+TRANSITION, downStateValue);
 				dataset.addSeries(xyseries);
-				downStateValue += 1;
-				upStateValue += 1;
+				downStateValue -= 1;
+				upStateValue -= 1;
 			}
 		}
 		
@@ -306,21 +306,21 @@ public class TimingChartView extends ViewPart
 		XYSeries cycleSeries = list.get(0);
 		for (double v=0; v<tmax+cycle ; v += cycle) {
 			cycleSeries.add(v-TRANSITION, 0);
-			cycleSeries.add(v, downStateValue);//DEFAULT_MAX_VALUE_RANGE);
+			cycleSeries.add(v, DEFAULT_DOWNSTATE + item.getChildren().size());
 			cycleSeries.add(v+TRANSITION, 0);
 		}
 		
 		XYPlot xyplot = chart.getXYPlot();
 		ValueAxis yAxis = xyplot.getRangeAxis();
-		yAxis.setRange(DEFAULT_RANGE_MIN, downStateValue);
+		yAxis.setRange(DEFAULT_RANGE_MIN, DEFAULT_DOWNSTATE + item.getChildren().size());
+		
 		// extends line
-		downStateValue = DEFAULT_DOWNSTATE;
-		upStateValue   = DEFAULT_UPSTATE;
+		downStateValue = DEFAULT_DOWNSTATE + item.getChildren().size() - 1;
+		upStateValue   = downStateValue + DEFAULT_UPSTATE;
 		for (int i=1; i<list.size(); i++) {
-			XYSeries s = list.get(i);
-			s.add((int)(tmax/cycle)*cycle+cycle, downStateValue);
-			downStateValue += 1;
-			upStateValue += 1;
+			list.get(i).add((int)(tmax/cycle)*cycle+cycle, downStateValue);
+			downStateValue -= 1;
+			upStateValue -= 1;
 		}
 		
 		parent.update();
