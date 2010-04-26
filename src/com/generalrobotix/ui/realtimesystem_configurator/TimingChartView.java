@@ -276,13 +276,13 @@ public class TimingChartView extends ViewPart
 			double t1 = 0;
 			while ( rtcs.hasNext() ) {
 				RTComponentItem rtc = (RTComponentItem)rtcs.next();
-				double t2 = t1 + ((showMode == SHOW_WORST) ? rtc.getResult().max*SEC2MSEC : rtc.getResult().mean*SEC2MSEC);
 				XYSeries xyseries = new XYSeries(rtc.getName());
 				xyseries.add(-TRANSITION, downStateValue);
 				xyseries.add(t1-TRANSITION, downStateValue);
 				xyseries.add(t1, upStateValue);
-				xyseries.add(t2, upStateValue);
-				xyseries.add(t2+TRANSITION, downStateValue);
+				t1 += ((showMode == SHOW_WORST) ? rtc.getResult().max*SEC2MSEC : rtc.getResult().mean*SEC2MSEC);
+				xyseries.add(t1, upStateValue);
+				xyseries.add(t1+TRANSITION, downStateValue);
 				dataset.addSeries(xyseries);
 				downStateValue += 1;
 				upStateValue += 1;
