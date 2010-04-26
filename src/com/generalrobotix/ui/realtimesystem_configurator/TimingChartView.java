@@ -18,6 +18,8 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.TickUnitSource;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
@@ -186,8 +188,8 @@ public class TimingChartView extends ViewPart
 			}
 			return;
 		}
-		double downStateValue = 0.5;
-		double upStateValue   = 1.0;
+		double downStateValue = 1.0;
+		double upStateValue   = 1.5;
 		double cycle = 1.0/item.getRate()*SEC2MSEC;
 		JFreeChart chart = chartList.get(index).getChart();
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
@@ -283,10 +285,12 @@ public class TimingChartView extends ViewPart
 		xyplot.setBackgroundPaint(Color.white);
 		xyplot.setDomainGridlinePaint(Color.black);
 		xyplot.setDomainGridlinesVisible(true);
-
+		xyplot.setRangeGridlinePaint(Color.black);
+		xyplot.setRangeGridlinesVisible(true);
 		ValueAxis yAxis = xyplot.getRangeAxis();
 		yAxis.setRange(0.0, DEFAULT_MAX_VALUE_RANGE);
 		yAxis.setVisible(false);
+		yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
 
 		ChartComposite chartComp = new ChartComposite(parent, SWT.NONE, chart, true);
 		chartComp.setLayoutData(new GridData(GridData.FILL_BOTH));
