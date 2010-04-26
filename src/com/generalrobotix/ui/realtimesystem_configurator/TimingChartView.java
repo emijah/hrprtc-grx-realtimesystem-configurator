@@ -176,6 +176,16 @@ public class TimingChartView extends ViewPart
 		}
 	}
 	
+	private void showAllValue(int i)
+	{
+		XYSeriesCollection dataset = (XYSeriesCollection) chartList.get(i).getChart().getXYPlot().getDataset();
+		double l = dataset.getDomainLowerBound(false);
+		double u = dataset.getDomainUpperBound(false);
+		double m = (u-l)*0.05;
+		ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
+		xaxis.setRange(l-m, u+m);
+	}
+	
 	synchronized public void updateCharts()
 	{
 		TreeModelItem root = selectedItem_.getRoot();
@@ -298,6 +308,8 @@ public class TimingChartView extends ViewPart
 			downStateValue += 1;
 			upStateValue += 1;
 		}
+		
+		showAllValue(index);
 		parent.update();
 	}
 	
