@@ -16,14 +16,13 @@ import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.TickUnitSource;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.data.Range;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.jfree.experimental.chart.swt.ChartComposite;
@@ -36,24 +35,33 @@ public class TimingChartView extends ViewPart
 {
 	private List<ChartComposite> chartList = new ArrayList<ChartComposite>();
 	private Composite parent;
+	private static TimingChartView this_;
+	private TreeModelItem selectedItem_;
+	
 	private static final int INITIAL_CHART_NUM = 3;
 	private static final String XAXIS_LABEL = "Time[msec]";
 	private static final int LAST_PERIOD  = 0;
 	private static final int SHOW_WORST   = 1;
 	private static final int SHOW_AVERAGE = 2;
 	private static final String[] SHOW_MODE_LABELS = new String[]{"last period", "worst one", "average"};
+	
 	private int showMode = LAST_PERIOD;
+	private double offset = -1;
+	
+	private Action actZoomIn;
+	private Action actZoomOut;
 	private Action actChangeMode;
 	private Action actMoveRangeRight;
 	private Action actMoveRangeLeft;
 	private Action actMoveRangeRight2;
 	private Action actMoveRangeLeft2;
-	private static TimingChartView this_;
-	private TreeModelItem selectedItem_;
 	
 	private static final double SEC2MSEC = 1000.0;
 	private static final double TRANSITION = 0.000000001;
-	private static final double DEFAULT_MAX_VALUE_RANGE = 4.0;
+	private static final double DEFAULT_DOWNSTATE = 1.0;
+	private static final double DEFAULT_UPSTATE   = 1.5;
+	private static final double DEFAULT_RANGE_MAX = 4.0;
+	private static final double DEFAULT_RANGE_MIN = 0.5;
 	
 	private Text txtPlatFromInfo;
 	
@@ -82,54 +90,49 @@ public class TimingChartView extends ViewPart
 			}
 		});
 		
+		actZoomIn = new Action("Zoom In") {
+			public void run() {
+				zoomRange(0.9);
+			}
+		};
+		actZoomIn.setToolTipText("Zoom In & sync. graphs");
+		actZoomIn.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/zoomin.png"));
+		getViewSite().getActionBars().getToolBarManager().add(actZoomIn);
+		
+		actZoomOut = new Action("Zoom Out") {
+			public void run() {
+				zoomRange(1.1);
+			}
+		};
+		actZoomOut.setToolTipText("Zoom Out & sync. graphs");
+		actZoomOut.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/zoomout.png"));
+		getViewSite().getActionBars().getToolBarManager().add(actZoomOut);
+		
+		
 		actMoveRangeLeft2 = new Action("<<", Action.AS_PUSH_BUTTON) {
 			public void run() {
-				for (int i=0; i<chartList.size(); i++) {
-					ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
-					double l = xaxis.getLowerBound();
-					double u = xaxis.getUpperBound();
-					double r = (u-l)*0.1;
-					xaxis.setRange(l-r, u-r);
-				}
+				moveRange(-0.1);
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeLeft2);
 		
 		actMoveRangeLeft = new Action("<", Action.AS_PUSH_BUTTON) {
 			public void run() {
-				for (int i=0; i<chartList.size(); i++) {
-					ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
-					double l = xaxis.getLowerBound();
-					double u = xaxis.getUpperBound();
-					double r = (u-l)*0.01;
-					xaxis.setRange(l-r, u-r);
-				}
+				moveRange(-0.01);
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeLeft);
 		
 		actMoveRangeRight = new Action(">", Action.AS_PUSH_BUTTON) {
 			public void run() {
-				for (int i=0; i<chartList.size(); i++) {
-					ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
-					double l = xaxis.getLowerBound();
-					double u = xaxis.getUpperBound();
-					double r = (u-l)*0.01;
-					xaxis.setRange(l+r, u+r);
-				}
+				moveRange(0.01);
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeRight);
 		
 		actMoveRangeRight2 = new Action(">>", Action.AS_PUSH_BUTTON) {
 			public void run() {
-				for (int i=0; i<chartList.size(); i++) {
-					ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
-					double l = xaxis.getLowerBound();
-					double u = xaxis.getUpperBound();
-					double r = (u-l)*0.1;
-					xaxis.setRange(l+r, u+r);
-				}
+				moveRange(0.1);
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeRight2);
@@ -152,11 +155,33 @@ public class TimingChartView extends ViewPart
 		}
 	}
 	
+	private void zoomRange(double zoomRate) 
+	{
+		ValueAxis xaxis = chartList.get(0).getChart().getXYPlot().getDomainAxis();
+		double l = xaxis.getLowerBound();
+		double u = xaxis.getUpperBound();
+		for (int i=0; i<chartList.size(); i++) {
+			chartList.get(i).getChart().getXYPlot().getDomainAxis().setRange(l, l+(u-l)*zoomRate);
+		}
+	}
+	
+	private void moveRange(double moveRate) 
+	{
+		for (int i=0; i<chartList.size(); i++) {
+			ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
+			double l = xaxis.getLowerBound();
+			double u = xaxis.getUpperBound();
+			double r = (u-l)*moveRate;
+			xaxis.setRange(l+r, u+r);
+		}
+	}
+	
 	synchronized public void updateCharts()
 	{
 		TreeModelItem root = selectedItem_.getRoot();
 		Iterator<TreeModelItem> checkedItems = root.getCheckedItems().iterator();
 		int index = 0;
+		offset = -1;
 		while ( checkedItems.hasNext() ) {
 			TreeModelItem item = checkedItems.next();
 			if ( item instanceof ExecutionContextItem ) {
@@ -188,8 +213,8 @@ public class TimingChartView extends ViewPart
 			}
 			return;
 		}
-		double downStateValue = 1.0;
-		double upStateValue   = 1.5;
+		double downStateValue = DEFAULT_DOWNSTATE;
+		double upStateValue   = DEFAULT_UPSTATE;
 		double cycle = 1.0/item.getRate()*SEC2MSEC;
 		JFreeChart chart = chartList.get(index).getChart();
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
@@ -201,16 +226,17 @@ public class TimingChartView extends ViewPart
 		
 		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
 		if ( showMode == LAST_PERIOD ) {
-			double offset = -1;
-			while ( rtcs.hasNext() ) {
-				RTComponentItem rtc = (RTComponentItem)rtcs.next();
-				List<Double> log = rtc.getResult().lastLog_;
-				if ( log.size() == 0 ) {
-					offset = 0;
-				} else if ( offset <= 0 ) {
-					offset =  log.get(0);
-				} else {
-					offset = Math.min(offset, log.get(0));
+			if ( offset < 0 ) {
+				while ( rtcs.hasNext() ) {
+					RTComponentItem rtc = (RTComponentItem)rtcs.next();
+					List<Double> log = rtc.getResult().lastLog_;
+					if ( log.size() == 0 ) {
+						offset = 0;
+					} else if ( offset <= 0 ) {
+						offset =  log.get(0);
+					} else {
+						offset = Math.min(offset, log.get(0));
+					}
 				}
 			}
 			rtcs =  item.getChildren().iterator();
@@ -262,11 +288,10 @@ public class TimingChartView extends ViewPart
 		
 		XYPlot xyplot = chart.getXYPlot();
 		ValueAxis yAxis = xyplot.getRangeAxis();
-		yAxis.setRange(0.0, downStateValue);
-		
+		yAxis.setRange(DEFAULT_RANGE_MIN, downStateValue);
 		// extends line
-		downStateValue = 0.5;
-		upStateValue   = 1.0;
+		downStateValue = DEFAULT_DOWNSTATE;
+		upStateValue   = DEFAULT_UPSTATE;
 		for (int i=1; i<list.size(); i++) {
 			XYSeries s = list.get(i);
 			s.add((int)(tmax/cycle)*cycle+cycle, downStateValue);
@@ -288,7 +313,7 @@ public class TimingChartView extends ViewPart
 		xyplot.setRangeGridlinePaint(Color.black);
 		xyplot.setRangeGridlinesVisible(true);
 		ValueAxis yAxis = xyplot.getRangeAxis();
-		yAxis.setRange(0.0, DEFAULT_MAX_VALUE_RANGE);
+		yAxis.setRange(DEFAULT_RANGE_MIN, DEFAULT_RANGE_MAX);
 		yAxis.setVisible(false);
 		yAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
 
