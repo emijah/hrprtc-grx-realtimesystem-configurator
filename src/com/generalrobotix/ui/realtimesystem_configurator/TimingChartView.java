@@ -179,13 +179,24 @@ public class TimingChartView extends ViewPart
 	
 	private void showAllValue()
 	{
+		double l = 0, u = 0;
 		for (int i=0; i<chartList.size(); i++) {
 			XYSeriesCollection dataset = (XYSeriesCollection) chartList.get(i).getChart().getXYPlot().getDataset();
-			double l = dataset.getDomainLowerBound(false);
-			double u = dataset.getDomainUpperBound(false);
-			double m = (u-l)*0.05;
-			ValueAxis xaxis = chartList.get(i).getChart().getXYPlot().getDomainAxis();
-			xaxis.setRange(l-m, u+m);
+			if ( dataset != null) {
+				double tmpL = dataset.getDomainLowerBound(false);
+				double tmpU = dataset.getDomainUpperBound(false);
+				if ( i == 0 ) {
+					l = tmpL;
+					u = tmpU;
+				} else {
+					l = Math.min(l, tmpL);
+					u = Math.max(u, tmpU);
+				}
+			}
+		}
+		double m = (u-l)*0.05;
+		for (int i=0; i<chartList.size(); i++) {
+			chartList.get(i).getChart().getXYPlot().getDomainAxis().setRange(l-m, u+m);
 		}
 	}
 	
