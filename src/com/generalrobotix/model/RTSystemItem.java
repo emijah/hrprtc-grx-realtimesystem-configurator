@@ -15,25 +15,30 @@ import org.openrtp.namespaces.rts.version02.TargetPort;
 
 import com.generalrobotix.model.RTComponentItem.RTCConnection;
 
-public class RTSystemItem extends TreeModelItem {
+public class RTSystemItem extends TreeModelItem
+{
     private XmlHandler rtsProfileOperator = new XmlHandler();
 	private RtsProfileExt profile;
 	private List<RTComponentItem> members;
 	private List<RTCConnection> rtcConnections;
+	private List<ExecutionContextItem> eclist;
 	private String version;
 	private static final String ICON_PATH = "icons/grxRTS.png";
 	
-	public RTSystemItem(String rtsProfilePath) {
+	public RTSystemItem(String rtsProfilePath)
+	{
 		setRoot(this);
 		load(rtsProfilePath);
 		setIconPath(ICON_PATH);
 	}
 	
-	public String getId() {
+	public String getId()
+	{
 		return profile.getId();
 	}
 	
-	private void load(String fname) {
+	private void load(String fname)
+	{
 	   	try {
 			profile = rtsProfileOperator.loadXmlRts(fname);
 	    	String[] ids = profile.getId().split(":");
@@ -44,19 +49,28 @@ public class RTSystemItem extends TreeModelItem {
 		this.updateStructure();
 	}
 	
-	public List<RTComponentItem> getRTCMembers() {
+	public List<RTComponentItem> getRTCMembers()
+	{
 		return members;
 	}
 	
-	public List<DataportConnector> getDataPortConnectors() {
+	public List<ExecutionContextItem> getExecutionContexts()
+	{
+		return eclist;
+	}
+	
+	public List<DataportConnector> getDataPortConnectors()
+	{
 		return profile.getDataPortConnectors();
 	}
 	
-	public List<RTCConnection> getRTCConnections() {
+	public List<RTCConnection> getRTCConnections()
+	{
 		return rtcConnections;
 	}
 	
-	public RTComponentItem findRTC(String componentId, String instanceId) {
+	public RTComponentItem findRTC(String componentId, String instanceId)
+	{
 		Iterator<RTComponentItem> it = members.iterator();
 		while ( it.hasNext() ) {
 			RTComponentItem rtc = it.next();
@@ -71,9 +85,11 @@ public class RTSystemItem extends TreeModelItem {
 	/*
 	 * update model structure
 	 */
-	private void updateStructure() {
+	private void updateStructure()
+	{
     	// step1.update the list of rtc item and ec item
     	members = new ArrayList<RTComponentItem>();
+    	eclist = new ArrayList<ExecutionContextItem>();
 		Iterator<Component> comps = profile.getComponents().iterator();
 		while ( comps.hasNext() ) {
 			Component comp = comps.next();
@@ -81,6 +97,7 @@ public class RTSystemItem extends TreeModelItem {
 			RTComponentItem item = null;
 			if ( type.equals("PeriodicECShared") || type.equals("PeriodicStateShared")) {
 				item = new ExecutionContextItem(this, comp);
+				eclist.add((ExecutionContextItem) item);
 			} else {
 				item = new RTComponentItem(this, comp);
 			}
@@ -112,6 +129,7 @@ public class RTSystemItem extends TreeModelItem {
 				ExecutionContextItem ecItem = new ExecutionContextItem(this, rtc.getComponent());
 				ecItem.add(rtc);
 				members.add(ecItem);
+				eclist.add(ecItem);
 			}
 		}
 		
@@ -128,7 +146,8 @@ public class RTSystemItem extends TreeModelItem {
 		}
 	}
 	
-	public String getVersion() {
+	public String getVersion()
+	{
 		return version;
 	}
-}
+} 
