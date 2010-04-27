@@ -40,6 +40,7 @@ public class BenchmarkResultItem extends TreeModelItem
 	
 	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
 	private static int LOG_CAPACITY = 500;
+	private int logCapacity = LOG_CAPACITY;
 
 	public BenchmarkResultItem() 
 	{
@@ -81,7 +82,11 @@ public class BenchmarkResultItem extends TreeModelItem
 	public void updateLog(NamedStateLog namedLog)
 	{
 		TimedState[] log = namedLog.log;
-		double lastT = ( lastLog_ != null && lastLog_.size() > 0 ) ? lastLog_.get(lastLog_.size() - 2) : 0;
+		double lastT = 0;
+		if ( lastLog_ != null && lastLog_.size() > 0 ) {
+			lastT = lastLog_.get(lastLog_.size() - 2);
+			logCapacity = log.length - 2;
+		}
 		int lastCount = count;
 		//stddev = Math.pow(stddev, 2);
 		for (int i=0; i<log.length; i++) {
@@ -102,7 +107,7 @@ public class BenchmarkResultItem extends TreeModelItem
 					i++;
 					lastLog_.add(t1);
 					lastLog_.add(diff);
-					while ( lastLog_.size() > log.length-2) {
+					while ( lastLog_.size() > logCapacity ) {
 						lastLog_.remove(0);
 						lastLog_.remove(0);
 					}

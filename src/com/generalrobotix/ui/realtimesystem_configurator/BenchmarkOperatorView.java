@@ -152,10 +152,10 @@ public class BenchmarkOperatorView extends ViewPart {
 		lblInterval.setText("Interval:");
 		
 		cmbInterval_ = new Combo(btnPanel, SWT.NONE | SWT.READ_ONLY);
-		for (int i=0; i<10; i++) {
-			cmbInterval_.add(Integer.toString(500 + i*100)+" [ms]");
-			cmbInterval_.select((DEFAULT_LOGGING_INTERVAL-500)/100);
+		for (int i=0; i<20; i++) {
+			cmbInterval_.add(Integer.toString(100 + i*100)+" [ms]");
 		}
+		cmbInterval_.select((DEFAULT_LOGGING_INTERVAL-100)/100);
 		cmbInterval_.addSelectionListener(new SelectionListener() {
 			@Override
 			public void widgetDefaultSelected(SelectionEvent e) {}
@@ -402,24 +402,22 @@ public class BenchmarkOperatorView extends ViewPart {
 				
 				System.out.println("\nactivating components");
 				// Serialize and Activate Components
-				it = currentSystem.getRTCMembers().iterator();
-				while ( it.hasNext() ) {
-					RTComponentItem rtc = it.next();
-					if ( rtc instanceof ExecutionContextItem ) {
-						List<RTObject> rtcs = new ArrayList<RTObject>();
-						Iterator<TreeModelItem> children = ((ExecutionContextItem)rtc).getChildren().iterator();
-						while ( children.hasNext() ) {
-							TreeModelItem item = children.next();
-							if ( item instanceof RTComponentItem ) {
-								RTObject r = GrxRTMUtil.findRTC(((RTComponentItem)item).getComponent().getInstanceName(), rnc);
-								if ( r != null ) {
-									rtcs.add(r);
-								} 
-							}
+				Iterator<ExecutionContextItem> ecs = currentSystem.getExecutionContexts().iterator();
+				while ( ecs.hasNext() ) {
+					ExecutionContextItem ec = ecs.next();
+					List<RTObject> rtcs = new ArrayList<RTObject>();
+					Iterator<TreeModelItem> children = ec.getChildren().iterator();
+					while ( children.hasNext() ) {
+						TreeModelItem item = children.next();
+						if ( item instanceof RTComponentItem ) {
+							RTObject r = GrxRTMUtil.findRTC(((RTComponentItem)item).getComponent().getInstanceName(), rnc);
+							if ( r != null ) {
+								rtcs.add(r);
+							} 
 						}
-						GrxRTMUtil.serializeComponents(rtcs);
-						GrxRTMUtil.activateComponents(rtcs);
 					}
+					GrxRTMUtil.serializeComponents(rtcs);
+					GrxRTMUtil.activateComponents(rtcs);
 				}
 				
 				System.out.println("\nInitialized successfully");
@@ -501,34 +499,49 @@ public class BenchmarkOperatorView extends ViewPart {
 	{
 		boolean ret = false;
 		if ( currentSystem != null ) {
-			Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
-			String hostName = cmbRobotHost_.getText();
-			while ( it.hasNext() ) {
-				RTComponentItem model = it.next();
-				if ( model instanceof ExecutionContextItem ) {
-					ret |= updateLog((ExecutionContextItem)model, hostName);
-				}
+			NamingContext rnc = GrxRTMUtil.getRootNamingContext(cmbRobotHost_.getText(), robotPort_);
+			List<NamedStateLog[]> l = new ArrayList<NamedStateLog[]>();
+			List<ExecutionContextItem> eclist = currentSystem.getExecutionContexts();
+			for (int i=0; i<eclist.size(); i++) {
+				l.add(getLogs(eclist.get(i), rnc));
 			}
+			for (int i=0; i<eclist.size(); i++) {
+				setLogs(eclist.get(i), rnc, l.get(i));
+			}
+			GrxRTMUtil.releaseObject(rnc);
 			rtsViewer.refresh();
 			TimingChartView.getInstance().updateCharts();
 		}
 		return ret;
 	}
 	
-	private boolean updateLog(ExecutionContextItem ecModel, String hostName)
+	private NamedStateLog[] getLogs(ExecutionContextItem ecModel, NamingContext rnc)
 	{
-		NamingContext rnc = null;
+		RTObject rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
+		try {
+			BenchmarkService bmSVC =  BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
+			return bmSVC.get_logs();
+		} catch (InvalidParameter e) {
+			e.printStackTrace();
+		} catch (NotAvailable e) {
+			e.printStackTrace();
+		} catch (InternalError e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	private boolean setLogs(ExecutionContextItem ecModel, NamingContext rnc, NamedStateLog[] logs)
+	{
 		RTObject rtc = null;
 		BenchmarkService bmSVC = null;
 		try {
 			// get information from target system
 			double cycle = 1.0/ecModel.getRate();
-			rnc = GrxRTMUtil.getRootNamingContext(hostName, robotPort_);
 			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
 			bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
-			NamedStateLog[] logs = bmSVC.get_logs();
-			PlatformInfo pInfo = bmSVC.get_platform_info();
 			
+			PlatformInfo pInfo = bmSVC.get_platform_info();
 			// update logs
 			Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
 			while ( it.hasNext() ) {
@@ -555,7 +568,6 @@ public class BenchmarkOperatorView extends ViewPart {
 			System.out.println("EC:" + ecModel.getName() + " is not available.");
 			e.printStackTrace();
 		} finally {
-			GrxRTMUtil.releaseObject(rnc);
 			GrxRTMUtil.releaseObject(rtc);
 			GrxRTMUtil.releaseObject(bmSVC);
 		}
