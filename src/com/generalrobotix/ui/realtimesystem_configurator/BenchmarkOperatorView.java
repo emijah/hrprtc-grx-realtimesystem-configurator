@@ -3,8 +3,6 @@ package com.generalrobotix.ui.realtimesystem_configurator;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintStream;
-import java.net.InetAddress;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -12,9 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-import org.eclipse.core.resources.IProject;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.util.IPropertyChangeListener;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
 import org.eclipse.jface.viewers.ITableColorProvider;
@@ -24,15 +20,12 @@ import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
-import org.eclipse.swt.events.KeyEvent;
-import org.eclipse.swt.events.KeyListener;
 import org.eclipse.swt.events.SelectionEvent;
 import org.eclipse.swt.events.SelectionListener;
 import org.eclipse.swt.graphics.Color;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
-import org.eclipse.swt.layout.RowData;
 import org.eclipse.swt.layout.RowLayout;
 import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Combo;
@@ -56,6 +49,9 @@ import OpenRTM.BenchmarkService;
 import OpenRTM.BenchmarkServiceHelper;
 import OpenRTM.NamedStateLog;
 import OpenRTM.PlatformInfo;
+import RTC.ConnectorProfile;
+import RTC.ConnectorProfileHolder;
+import RTC.PortService;
 import RTC.RTObject;
 import RTM.Manager;
 import _SDOPackage.InternalError;
@@ -114,8 +110,12 @@ public class BenchmarkOperatorView extends ViewPart {
 
 			public void widgetSelected(SelectionEvent e)
 			{
-				//setupRTSystem();
-				execPython(null);
+				setupRTSystem();
+				/*String pythonPath = "/home/kawasumi/project/hrpsysRTM/src/hrpsys3/grx/REFHW/scripts";
+				String moduleName = "test";
+				ArrayList<String> args = new ArrayList<String>();
+				args.add(cmbRobotHost_.getText());
+				execPython(pythonPath, moduleName, args);*/
 			}	
 		});
 		
@@ -350,21 +350,34 @@ public class BenchmarkOperatorView extends ViewPart {
 	private void setupRTSystem()
 	{
 		if ( currentSystem != null ) {
-			String hostname = null;
+			String hostName = null;
 			try {
-				hostname = InetAddress.getLocalHost().getHostName(); // = txtRobotHost_.getText();
-				NamingContext rnc = GrxRTMUtil.getRootNamingContext(hostname, robotPort_);
-				Manager mgr = GrxRTMUtil.findRTCmanager(hostname, rnc);
+				System.out.println("creating components");
+				//hostname = InetAddress.getLocalHost().getHostName();
+				hostName = cmbRobotHost_.getText();
+				NamingContext rnc = GrxRTMUtil.getRootNamingContext(hostName, robotPort_);
+				Manager mgr = GrxRTMUtil.findRTCmanager(hostName, rnc);
+				if ( mgr == null ) {
+					System.out.println("cant find rtc manager on "+hostName + "("+ robotPort_ + ")");
+				}
 				// Create Components
 				Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
 				while ( it.hasNext() ) {
 					RTComponentItem model = it.next();
+					System.out.print("Creating " + model.getName() + " on " + hostName + " ...");
 					if ( GrxRTMUtil.findRTC(model.getName(), rnc) == null ) {
-						createComp(model, mgr);
+						if ( createComp(model, mgr) != null ) {
+							System.out.println(" success.");
+						} else {
+							System.out.println(" failed.");
+						}
+					} else {
+						System.out.println(" alread created.");
 					}
 				}
 				
-				// Connect Dataports
+				System.out.println("\nconnecting components");
+				// Connect Data ports
 				Iterator<DataportConnector> connectors = currentSystem.getDataPortConnectors().iterator();
 				while ( connectors.hasNext() ) {
 					DataportConnector con = connectors.next();
@@ -372,27 +385,81 @@ public class BenchmarkOperatorView extends ViewPart {
 					TargetPort dst = con.getTargetDataPort();
 					RTObject srcObj = GrxRTMUtil.findRTC(src.getInstanceName(), rnc);
 					RTObject dstObj = GrxRTMUtil.findRTC(dst.getInstanceName(), rnc);
+					PortService srcPort = GrxRTMUtil.findPort(srcObj, src.getPortName());
+					PortService dstPort = GrxRTMUtil.findPort(dstObj, dst.getPortName());
+					ConnectorProfileHolder con_prof = new ConnectorProfileHolder();
+					con_prof.value = new ConnectorProfile();
+					con_prof.value.name = "connector0";
+					con_prof.value.connector_id = "";
+					con_prof.value.ports = new PortService[]{srcPort, dstPort};
+					con_prof.value.properties = new _SDOPackage.NameValue[]{
+							GrxRTMUtil.createNameValue("dataport.interface_type", "corba_cdr"),
+							GrxRTMUtil.createNameValue("dataport.dataflow_type","Push"),
+							GrxRTMUtil.createNameValue("dataport.subscription_type","flush")};
+					srcPort.connect(con_prof);
+					System.out.println("connect: " + src.getPortName() + " to " + dst.getPortName());
 				}
+				
+				System.out.println("\nactivating components");
+				// Serialize and Activate Components
+				it = currentSystem.getRTCMembers().iterator();
+				while ( it.hasNext() ) {
+					RTComponentItem rtc = it.next();
+					if ( rtc instanceof ExecutionContextItem ) {
+						List<RTObject> rtcs = new ArrayList<RTObject>();
+						Iterator<TreeModelItem> children = ((ExecutionContextItem)rtc).getChildren().iterator();
+						while ( children.hasNext() ) {
+							TreeModelItem item = children.next();
+							if ( item instanceof RTComponentItem ) {
+								RTObject r = GrxRTMUtil.findRTC(((RTComponentItem)item).getComponent().getInstanceName(), rnc);
+								if ( r != null ) {
+									rtcs.add(r);
+								} 
+							}
+						}
+						GrxRTMUtil.serializeComponents(rtcs);
+						GrxRTMUtil.activateComponents(rtcs);
+					}
+				}
+				
+				System.out.println("\nInitialized successfully");
+				
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		}
 	}
 	
-	private void createComp(RTComponentItem model, Manager mgr)
+	private RTObject createComp(RTComponentItem model, Manager mgr)
 	{
+		RTObject ret = null;
 		try {
 			String category = model.getId().split(":")[0];
 			if ( category.equals("RTC") ) {
 				model.getName();
 				String[] s = model.getId().split(":")[1].split("[.]");
 				String loadable = s[s.length-1];
-				mgr.create_component(loadable);
+				ret = mgr.create_component(loadable);
 			}
 		} catch (Exception e) {
 			e.printStackTrace();
 			GrxRTMUtil.releaseObject(mgr);
 		}
+		
+		return ret;
+	}
+	
+	private void connectComp()
+	{
+		//IProject proj = BenchmarkResultExplorer.getInstance().getProject();		
+		//List<String> args = new ArrayList<String>();
+		//args.add(e);
+		//execPython(proj.getLocation().toString()+"/scripts", "startup", args);
+	}
+	
+	private void generateSetupScript()
+	{
+		
 	}
 	
 	private void resetLogAction() 
@@ -466,11 +533,12 @@ public class BenchmarkOperatorView extends ViewPart {
 			Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
 			while ( it.hasNext() ) {
 				RTComponentItem model = (RTComponentItem)it.next();
-				model.getResult().setCycle(cycle);
-				model.getResult().updatePlatformInfo(pInfo);
+				BenchmarkResultItem result = model.getResult();
+				result.setCycle(cycle);
+				result.updatePlatformInfo(pInfo);
 				for (int i=0; i<logs.length; i++) {
 					if ( logs[i].id.equals(model.getName()) ) {
-						model.getResult().updateLog(logs[i]);
+						result.updateLog(logs[i]);
 						break;
 					}
 				}
@@ -494,22 +562,24 @@ public class BenchmarkOperatorView extends ViewPart {
 		return false;
 	}
 	
-	private void execPython(String fname)
+	private void execPython(String pythonPath, String moduleName, List<String> args)
 	{
-		IProject proj = BenchmarkResultExplorer.getInstance().getProject();
 		try {
-			String pythonPath = "/home/kawasumi/project/hrpsysRTM/src/hrpsys3/grx/REFHW/scripts";
-			String[] command = new String[]{"python", "-m", "test", cmbRobotHost_.getText()};
+			args.add(0, moduleName);
+			args.add(0, "-m");
+			args.add(0, "python");
 			String[] props = new String[]{"PYTHONPATH=" + pythonPath};
-			Process p = Runtime.getRuntime().exec(command, props);
+			Process p = Runtime.getRuntime().exec(args.toArray(new String[0]), props);
 			BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
 			BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-			PrintStream ps = new PrintStream(p.getOutputStream());
-			do {
+			//PrintStream ps = new PrintStream(p.getOutputStream());
+			while ( stdout.ready() ) {
 				System.out.println(stdout.readLine());
-			} while ( stdout.ready() );
+			}
+			while ( stderr.ready() ) {
+				System.out.println(stdout.readLine());
+			}
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
 	}

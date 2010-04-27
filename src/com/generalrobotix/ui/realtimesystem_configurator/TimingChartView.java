@@ -78,8 +78,10 @@ public class TimingChartView extends ViewPart
 		
 		updateChart(null, 0, false);
 
-		getSite().getPage().addSelectionListener(new ISelectionListener() {
-			public void selectionChanged(IWorkbenchPart part, ISelection selection) {
+		getSite().getPage().addSelectionListener(new ISelectionListener() 
+		{
+			public void selectionChanged(IWorkbenchPart part, ISelection selection)
+			{
 				if (part != TimingChartView.this &&	 selection instanceof IStructuredSelection) {
 					List sel = ((IStructuredSelection) selection).toList();
 					if ( sel.size()>0 && sel.get(0) instanceof TreeModelItem ) {
@@ -90,8 +92,10 @@ public class TimingChartView extends ViewPart
 			}
 		});
 		
-		actZoomIn = new Action("Zoom In") {
-			public void run() {
+		actZoomIn = new Action("Zoom In")
+		{
+			public void run()
+			{
 				zoomRange(0.9);
 			}
 		};
@@ -99,8 +103,10 @@ public class TimingChartView extends ViewPart
 		actZoomIn.setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/zoomin.png"));
 		getViewSite().getActionBars().getToolBarManager().add(actZoomIn);
 		
-		actZoomOut = new Action("Zoom Out") {
-			public void run() {
+		actZoomOut = new Action("Zoom Out")
+		{
+			public void run()
+			{
 				zoomRange(1.1);
 			}
 		};
@@ -109,40 +115,47 @@ public class TimingChartView extends ViewPart
 		getViewSite().getActionBars().getToolBarManager().add(actZoomOut);
 		
 		
-		actMoveRangeLeft2 = new Action("<<", Action.AS_PUSH_BUTTON) {
-			public void run() {
+		actMoveRangeLeft2 = new Action("<<", Action.AS_PUSH_BUTTON)
+		{
+			public void run()
+			{
 				moveRange(-0.1);
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeLeft2);
 		
-		actMoveRangeLeft = new Action("<", Action.AS_PUSH_BUTTON) {
-			public void run() {
+		actMoveRangeLeft = new Action("<", Action.AS_PUSH_BUTTON)
+		{
+			public void run()
+			{
 				moveRange(-0.01);
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeLeft);
 		
-		actMoveRangeRight = new Action(">", Action.AS_PUSH_BUTTON) {
-			public void run() {
+		actMoveRangeRight = new Action(">", Action.AS_PUSH_BUTTON) 
+		{
+			public void run() 
+			{
 				moveRange(0.01);
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeRight);
 		
-		actMoveRangeRight2 = new Action(">>", Action.AS_PUSH_BUTTON) {
-			public void run() {
+		actMoveRangeRight2 = new Action(">>", Action.AS_PUSH_BUTTON)
+		{
+			public void run()
+			{
 				moveRange(0.1);
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actMoveRangeRight2);
 		
-		actChangeMode = new Action(SHOW_MODE_LABELS[showMode], Action.AS_PUSH_BUTTON) {
-			public void run() {
+		actChangeMode = new Action(SHOW_MODE_LABELS[showMode], Action.AS_PUSH_BUTTON)
+		{
+			public void run()
+			{
 				changeShowMode();
-				actChangeMode.setText(SHOW_MODE_LABELS[showMode]);
-				updateCharts();
-				showAllValue();
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actChangeMode);
@@ -154,6 +167,9 @@ public class TimingChartView extends ViewPart
 		if ( showMode >= SHOW_MODE_LABELS.length) {
 			showMode = 0;
 		}
+		actChangeMode.setText(SHOW_MODE_LABELS[showMode]);
+		updateCharts();
+		showAllValue();
 	}
 	
 	private void zoomRange(double zoomRate) 
