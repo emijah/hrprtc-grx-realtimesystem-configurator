@@ -1,5 +1,7 @@
 package com.generalrobotix.ui.util;
 
+import java.util.List;
+
 import org.omg.CORBA.*;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
@@ -8,13 +10,12 @@ import org.omg.CosNaming.NamingContextPackage.CannotProceed;
 import org.omg.CosNaming.NamingContextPackage.InvalidName;
 import org.omg.CosNaming.NamingContextPackage.NotFound;
 
-import com.generalrobotix.model.RTComponentItem;
-
 import _SDOPackage.NameValue;
 
 import RTC.ComponentProfile;
 import RTC.ConnectorProfile;
 import RTC.ConnectorProfileHolder;
+import RTC.ExecutionContext;
 import RTC.PortInterfaceProfile;
 import RTC.PortProfile;
 import RTC.PortService;
@@ -92,6 +93,20 @@ public class GrxRTMUtil
 		}
 	}
 	
+	public static PortService findPort(RTObject rtc, String portname)
+	{
+		PortService[] ports    = rtc.get_ports();
+		ComponentProfile cprof = rtc.get_component_profile();
+		//String portname = cprof.instance_name + "." + name;
+		for (int i=0; i<ports.length; i++) {
+			PortProfile prof = ports[i].get_port_profile();
+			if ( prof.name.equals(portname) ) {
+				return ports[i];
+			}
+		}
+		return null;
+	}
+	
 	public static org.omg.CORBA.Object findService(RTObject rtc, String svcname) 
 	{
 		init();
@@ -131,5 +146,53 @@ public class GrxRTMUtil
 			return false;
 		}
 		return true;
+	}
+	
+	public static void serializeComponents(List<RTObject> rtcs)
+	{
+		if ( rtcs.size() == 0 ) {
+			return;
+		}
+		ExecutionContext ec = rtcs.get(0).get_owned_contexts()[0];
+		String owner = rtcs.get(0).get_component_profile().instance_name;
+		for (int i=1; i<rtcs.size(); i++) {
+			ExecutionContext[] pecs = rtcs.get(i).get_participating_contexts();
+			boolean alreadyAdded = false;
+			for (int j=0; j<pecs.length; j++) {
+				if ( ec._is_equivalent(pecs[j]) ) {
+					System.out.println(rtcs.get(i).get_component_profile().instance_name + " is already added to " + owner+ " "+ pecs.length);
+					alreadyAdded = true;
+					break;
+				}
+			}
+			if ( !alreadyAdded ) {
+				ec.add_component(rtcs.get(i));
+				System.out.println(rtcs.get(i).get_component_profile().instance_name + " is added to " + owner);
+			}
+		}
+	}
+	
+	public static void activateComponents(List<RTObject> rtcs)
+	{
+		for (int i=0; i<rtcs.size(); i++) {
+			RTObject rtc = rtcs.get(i);
+			ExecutionContext[] pecs = rtc.get_participating_contexts();
+			if ( pecs.length > 0 ) {
+				pecs[0].activate_component(rtc);
+				System.out.println(rtc.get_component_profile().instance_name + " is activated by part. ec."+ rtc.get_participating_contexts().length + ":"+ rtc.get_owned_contexts().length);
+			} else {
+				rtc.get_owned_contexts()[0].activate_component(rtc);
+				System.out.println(rtc.get_component_profile().instance_name + " is activated by own ec."+ rtc.get_participating_contexts().length + ":"+ rtc.get_owned_contexts().length);
+			}
+		}
+	}
+	
+	public static NameValue createNameValue(String name, String value)
+	{
+		_SDOPackage.NameValue nv = new _SDOPackage.NameValue();
+		nv.name = name;
+		nv.value = orb.create_any();
+		nv.value.insert_string(value);
+		return nv;
 	}
 }
