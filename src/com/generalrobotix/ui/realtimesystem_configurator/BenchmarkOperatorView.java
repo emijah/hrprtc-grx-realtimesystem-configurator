@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import org.eclipse.jface.action.Action;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -40,9 +41,7 @@ import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.omg.CosNaming.NamingContext;
-import org.openrtp.namespaces.rts.version02.Component;
 import org.openrtp.namespaces.rts.version02.DataportConnector;
-import org.openrtp.namespaces.rts.version02.ExecutionContext;
 import org.openrtp.namespaces.rts.version02.TargetPort;
 
 import OpenRTM.BenchmarkService;
@@ -67,7 +66,8 @@ import com.generalrobotix.ui.util.GrxRTMUtil;
 
 public class BenchmarkOperatorView extends ViewPart {
 	private RTSystemItem currentSystem;
-	
+private Action actTest;	
+boolean isTest = false;	
 	private TreeViewer rtsViewer;
 	private Button btnUpdate;
 	private Combo cmbInterval_;
@@ -186,6 +186,16 @@ public class BenchmarkOperatorView extends ViewPart {
 	            }
 	        }
 	    });
+		
+		actTest = new Action("test", Action.AS_PUSH_BUTTON)
+		{
+			public void run() 
+			{
+				isTest = !isTest;
+				System.out.println(isTest);
+			}
+		};
+		getViewSite().getActionBars().getToolBarManager().add(actTest);
 	}
 
 	@Override
@@ -229,11 +239,9 @@ public class BenchmarkOperatorView extends ViewPart {
 			try {				
 				RTComponentItem model = (RTComponentItem)obj;
 				BenchmarkResultItem result = model.getResult();
-				Component comp = model.getComponent();
-				List<ExecutionContext> eclist = comp.getExecutionContexts();
 				switch(index) {
-				case 0: return eclist.size() > 0 ? (model.getName() + ":" + eclist.get(0).getId()) : (model.getName());
-				case 1: return FORMAT_MSEC.format(result.cycle*1000.0);//eclist.size() > 0 ? (String.valueOf((int)(1.0/eclist.get(0).getRate()*1000))) : ("");
+				case 0: return model.getName();
+				case 1: return FORMAT_MSEC.format(result.cycle*1000.0);
 				case 2: return FORMAT_MSEC.format(result.max*1000.0);
 				case 3: return FORMAT_MSEC.format(result.mean*1000.0);
 				case 4: return String.valueOf(result.count);
@@ -287,8 +295,9 @@ public class BenchmarkOperatorView extends ViewPart {
 		
 	    public Image getImage(Object element)
 	    {
-	        if (element instanceof TreeModelItem) {
-	            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), ((TreeModelItem)element).getIconPath());
+	        if (element instanceof TreeModelItem ) {
+	        	String path = ((TreeModelItem)element).getIconPath();
+	            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), path);
 	            return cacheImage(desc);
 	        }
 	        return null;
@@ -350,30 +359,33 @@ public class BenchmarkOperatorView extends ViewPart {
 	private void setupRTSystem()
 	{
 		if ( currentSystem != null ) {
-			String hostName = null;
 			try {
 				System.out.println("creating components");
-				//hostname = InetAddress.getLocalHost().getHostName();
-				hostName = cmbRobotHost_.getText();
+				String hostName = cmbRobotHost_.getText();
 				NamingContext rnc = GrxRTMUtil.getRootNamingContext(hostName, robotPort_);
-				Manager mgr = GrxRTMUtil.findRTCmanager(hostName, rnc);
+				//Manager mgr = GrxRTMUtil.findRTCmanager(hostName, rnc);
+				Manager mgr = GrxRTMUtil.findRTCmanager(hostName, 2810);
 				if ( mgr == null ) {
 					System.out.println("cant find rtc manager on "+hostName + "("+ robotPort_ + ")");
 				}
+				
 				// Create Components
 				Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
 				while ( it.hasNext() ) {
 					RTComponentItem model = it.next();
-					System.out.print("Creating " + model.getName() + " on " + hostName + " ...");
 					if ( GrxRTMUtil.findRTC(model.getName(), rnc) == null ) {
 						if ( createComp(model, mgr) != null ) {
-							System.out.println(" success.");
+							System.out.print(" created:");
+							model.setState(RTComponentItem.RTC_SLEEP);
 						} else {
-							System.out.println(" failed.");
+							System.out.print(" failed:");
+							model.setState(RTComponentItem.RTC_NOT_EXIST);
 						}
 					} else {
-						System.out.println(" alread created.");
+						model.setState(RTComponentItem.RTC_SLEEP);
+						System.out.print("exist:");
 					}
+					System.out.println(model.getName() + " on " + hostName + " ...");
 				}
 				
 				System.out.println("\nconnecting components");
@@ -480,6 +492,11 @@ public class BenchmarkOperatorView extends ViewPart {
 		}
 	}
 
+	private void checkState()
+	{
+		
+	}
+	
 	public class UpdateLogThread implements Runnable
 	{
 		public void run() {
@@ -517,9 +534,11 @@ public class BenchmarkOperatorView extends ViewPart {
 	
 	private NamedStateLog[] getLogs(ExecutionContextItem ecModel, NamingContext rnc)
 	{
-		RTObject rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
+		RTObject rtc = null;
+		BenchmarkService bmSVC = null;
 		try {
-			BenchmarkService bmSVC =  BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
+			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
+			bmSVC =  BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
 			return bmSVC.get_logs();
 		} catch (InvalidParameter e) {
 			e.printStackTrace();
@@ -527,6 +546,9 @@ public class BenchmarkOperatorView extends ViewPart {
 			e.printStackTrace();
 		} catch (InternalError e) {
 			e.printStackTrace();
+		} finally {
+			GrxRTMUtil.releaseObject(rtc);
+			GrxRTMUtil.releaseObject(bmSVC);
 		}
 		return null;
 	}
@@ -546,6 +568,7 @@ public class BenchmarkOperatorView extends ViewPart {
 			Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
 			while ( it.hasNext() ) {
 				RTComponentItem model = (RTComponentItem)it.next();
+				model.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
 				BenchmarkResultItem result = model.getResult();
 				result.setCycle(cycle);
 				result.updatePlatformInfo(pInfo);

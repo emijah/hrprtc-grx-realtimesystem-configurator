@@ -38,4 +38,20 @@ public class ExecutionContextItem extends RTComponentItem{
 		}
 		return getName();
 	}
+	
+    public String getIconPath()
+    {
+    	switch(state_) {
+    	case RTC_NOT_EXIST:
+    		return "icons/Zombie.gif";
+    	case RTC_SLEEP:
+    		return "icons/ExecutionContext.png";
+    	case RTC_ACTIVE:
+    		return "icons/ExecutionContextActive.png";
+    	case RTC_BENCHMARK_AVAILABLE:
+    		return "icons/ExecutionContextMeasure.png";
+    	default:
+    		return "icons/Zombie.gif";
+    	}
+    }
 }

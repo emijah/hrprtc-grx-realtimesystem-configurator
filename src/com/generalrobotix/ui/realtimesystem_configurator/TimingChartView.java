@@ -248,7 +248,8 @@ public class TimingChartView extends ViewPart
 					JFreeChart chart = comp.getChart();
 					chart.setBackgroundPaint(Color.white);
 					chart.setTitle("NO DATA");
-					chart.getXYPlot().getDomainAxis().setUpperBound(5.2);
+					chart.getXYPlot().setDataset(null);
+					chart.getXYPlot().getDomainAxis().setRange(-0.25, 5.25);
 				}
 			}
 			return;
