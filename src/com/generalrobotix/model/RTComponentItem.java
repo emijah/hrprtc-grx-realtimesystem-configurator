@@ -11,6 +11,12 @@ public class RTComponentItem extends TreeModelItem
 	private RTSystemItem rtsystem;
 	private BenchmarkResultItem result;
 	private static final String ICON_PATH = "icons/Component.png";
+	public static final int RTC_NOT_EXIST  = 0;
+	public static final int RTC_SLEEP  = 1;
+	public static final int RTC_ACTIVE = 2;
+	public static final int RTC_BENCHMARK_AVAILABLE = 3;
+	protected int state_ = RTC_NOT_EXIST;
+	
 	
     public RTComponentItem(RTSystemItem rtsystem, Component comp)
     {
@@ -20,6 +26,32 @@ public class RTComponentItem extends TreeModelItem
     	this.component = comp;
     	this.rtsystem.add(this);
     	setIconPath(ICON_PATH);
+    }
+    
+    public String getIconPath()
+    {
+    	switch(state_) {
+    	case RTC_NOT_EXIST:
+    		return "icons/Zombie.gif";
+    	case RTC_SLEEP:
+    		return "icons/Component.png";
+    	case RTC_ACTIVE:
+    		return "icons/ComponentActive.png";
+    	case RTC_BENCHMARK_AVAILABLE:
+    		return "icons/ComponentMeasure.png";
+    	default:
+    		return "icons/Zombie.gif";
+    	}
+    }
+    
+    public int getState()
+    {
+    	return state_;
+    }
+    
+    public void setState(int state)
+    {
+    	this.state_ = state;
     }
 
 	public BenchmarkResultItem getResult()
