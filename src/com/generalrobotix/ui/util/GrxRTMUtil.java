@@ -93,14 +93,16 @@ public class GrxRTMUtil
 		}
 	}
 	
-	public static PortService findPort(RTObject rtc, String portname)
+	public static PortService findPort(RTObject rtc, String portName)
 	{
 		PortService[] ports    = rtc.get_ports();
-		ComponentProfile cprof = rtc.get_component_profile();
-		//String portname = cprof.instance_name + "." + name;
+		String instanceName = rtc.get_component_profile().instance_name;
+		if ( portName.indexOf(instanceName + ".") < 0 )  {
+			portName = instanceName + "." + portName;
+		}
 		for (int i=0; i<ports.length; i++) {
 			PortProfile prof = ports[i].get_port_profile();
-			if ( prof.name.equals(portname) ) {
+			if ( prof.name.equals(portName) ) {
 				return ports[i];
 			}
 		}
