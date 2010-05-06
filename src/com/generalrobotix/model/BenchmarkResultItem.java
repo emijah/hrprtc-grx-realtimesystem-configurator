@@ -82,6 +82,9 @@ public class BenchmarkResultItem extends TreeModelItem
 	public void updateLog(NamedStateLog namedLog)
 	{
 		TimedState[] log = namedLog.log;
+		if ( log.length == 0 ) {
+			return;
+		}
 		double lastT = 0;
 		if ( lastLog_ != null && lastLog_.size() > 0 ) {
 			lastT = lastLog_.get(lastLog_.size() - 2);

@@ -46,7 +46,8 @@ public class TimingChartView extends ViewPart
 	private static final String[] SHOW_MODE_LABELS = new String[]{"last period", "worst one", "average"};
 	
 	private int showMode = LAST_PERIOD;
-	private double offset = -1;
+	private boolean isOffsetUpdated = false;
+	private double offset = 0;
 	
 	private Action actZoomIn;
 	private Action actZoomOut;
@@ -57,7 +58,7 @@ public class TimingChartView extends ViewPart
 	private Action actMoveRangeLeft2;
 	
 	private static final double SEC2MSEC = 1000.0;
-	private static final double TRANSITION = 0.000000001;
+	private static final double TRANSITION = 0.0;
 	private static final double DEFAULT_DOWNSTATE = 1.0;
 	private static final double DEFAULT_UPSTATE   = 0.5;
 	private static final double DEFAULT_RANGE_MAX = 4.0;
@@ -221,7 +222,8 @@ public class TimingChartView extends ViewPart
 		TreeModelItem root = selectedItem_.getRoot();
 		Iterator<TreeModelItem> checkedItems = root.getCheckedItems().iterator();
 		int index = 0;
-		offset = -1;
+		isOffsetUpdated = false;
+		offset = 0;
 		while ( checkedItems.hasNext() ) {
 			TreeModelItem item = checkedItems.next();
 			if ( item instanceof ExecutionContextItem ) {
@@ -267,16 +269,17 @@ public class TimingChartView extends ViewPart
 		
 		Iterator<TreeModelItem> rtcs = item.getChildren().iterator();
 		if ( showMode == LAST_PERIOD ) {
-			if ( offset < 0 ) {
+			if ( !isOffsetUpdated ) {
 				while ( rtcs.hasNext() ) {
 					RTComponentItem rtc = (RTComponentItem)rtcs.next();
 					List<Double> log = rtc.getResult().lastLog_;
-					if ( log.size() == 0 ) {
-						offset = 0;
-					} else if ( offset <= 0 ) {
-						offset =  log.get(0);
-					} else {
-						offset = Math.min(offset, log.get(0));
+					if ( log.size() > 0 && log.get(0) > 0 ) {
+						if ( offset <= 0 ) {
+							offset = log.get(0);
+						} else {
+							offset = Math.min(offset, log.get(0));
+						}
+						isOffsetUpdated = true;
 					}
 				}
 			}
@@ -321,23 +324,24 @@ public class TimingChartView extends ViewPart
 		double tmax = dataset.getDomainUpperBound(false);
 		List<XYSeries> list = dataset.getSeries();
 		XYSeries cycleSeries = list.get(0);
-		for (double v=0; v<tmax+cycle ; v += cycle) {
-			cycleSeries.add(v-TRANSITION, 0);
-			cycleSeries.add(v, DEFAULT_DOWNSTATE + item.getChildren().size());
-			cycleSeries.add(v+TRANSITION, 0);
-		}
-		
-		XYPlot xyplot = chart.getXYPlot();
-		ValueAxis yAxis = xyplot.getRangeAxis();
-		yAxis.setRange(DEFAULT_RANGE_MIN, DEFAULT_DOWNSTATE + item.getChildren().size());
-		
-		// extends line
-		downStateValue = DEFAULT_DOWNSTATE + item.getChildren().size() - 1;
-		upStateValue   = downStateValue + DEFAULT_UPSTATE;
-		for (int i=1; i<list.size(); i++) {
-			list.get(i).add((int)(tmax/cycle)*cycle+cycle, downStateValue);
-			downStateValue -= 1;
-			upStateValue -= 1;
+		if ( cycle > 0 ) {
+			for (double v=0; v<tmax+cycle ; v += cycle) {
+				cycleSeries.add(v-TRANSITION, 0);
+				cycleSeries.add(v, DEFAULT_DOWNSTATE + item.getChildren().size());
+				cycleSeries.add(v+TRANSITION, 0);
+			}
+			XYPlot xyplot = chart.getXYPlot();
+			ValueAxis yAxis = xyplot.getRangeAxis();
+			yAxis.setRange(DEFAULT_RANGE_MIN, DEFAULT_DOWNSTATE + item.getChildren().size());
+			
+			// extends line
+			downStateValue = DEFAULT_DOWNSTATE + item.getChildren().size() - 1;
+			upStateValue   = downStateValue + DEFAULT_UPSTATE;
+			for (int i=1; i<list.size(); i++) {
+				list.get(i).add((int)(tmax/cycle)*cycle+cycle, downStateValue);
+				downStateValue -= 1;
+				upStateValue -= 1;
+			}
 		}
 		
 		parent.update();
