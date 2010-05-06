@@ -53,9 +53,6 @@ import RTC.ConnectorProfileHolder;
 import RTC.PortService;
 import RTC.RTObject;
 import RTM.Manager;
-import _SDOPackage.InternalError;
-import _SDOPackage.InvalidParameter;
-import _SDOPackage.NotAvailable;
 
 import com.generalrobotix.model.BenchmarkResultItem;
 import com.generalrobotix.model.ExecutionContextItem;
@@ -67,14 +64,10 @@ import com.generalrobotix.ui.util.GrxRTMUtil;
 public class BenchmarkOperatorView extends ViewPart {
 	private RTSystemItem currentSystem;
 private Action actTest;	
-boolean isTest = false;	
 	private TreeViewer rtsViewer;
 	private Button btnUpdate;
 	private Combo cmbInterval_;
 	private Combo cmbRobotHost_;
-	
-	private int robotPort_ = 2809;
-	private int loggingInterval_ = DEFAULT_LOGGING_INTERVAL;
 	
     private static Color white_;
     private static Color black_;
@@ -84,6 +77,14 @@ boolean isTest = false;
     private static final int DEFAULT_LOGGING_INTERVAL = 1000;
 	private static final DecimalFormat FORMAT_MSEC = new DecimalFormat(" 0.000;-0.000");
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+	
+	private int robotPort_ = 2809;
+	private int managerPort_ = 2810;
+	private int loggingInterval_ = DEFAULT_LOGGING_INTERVAL;
+	private NamingContext rootNC_;
+	private RTM.Manager manager_;
+	
+	boolean isTest = false;	
     
 	public BenchmarkOperatorView()
 	{
@@ -116,6 +117,8 @@ boolean isTest = false;
 				ArrayList<String> args = new ArrayList<String>();
 				args.add(cmbRobotHost_.getText());
 				execPython(pythonPath, moduleName, args);*/
+				checkState();
+				rtsViewer.refresh();
 			}	
 		});
 		
@@ -161,7 +164,8 @@ boolean isTest = false;
 			public void widgetDefaultSelected(SelectionEvent e) {}
 
 			@Override
-			public void widgetSelected(SelectionEvent e) {
+			public void widgetSelected(SelectionEvent e)
+			{
 				loggingInterval_ = Integer.parseInt(cmbInterval_.getText().split(" ")[0]);
 			}
 		});
@@ -191,8 +195,10 @@ boolean isTest = false;
 		{
 			public void run() 
 			{
-				isTest = !isTest;
-				System.out.println(isTest);
+				//isTest = !isTest;
+				//System.out.println(isTest);
+				checkState();
+				rtsViewer.refresh();
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actTest);
@@ -363,8 +369,7 @@ boolean isTest = false;
 				System.out.println("creating components");
 				String hostName = cmbRobotHost_.getText();
 				NamingContext rnc = GrxRTMUtil.getRootNamingContext(hostName, robotPort_);
-				//Manager mgr = GrxRTMUtil.findRTCmanager(hostName, rnc);
-				Manager mgr = GrxRTMUtil.findRTCmanager(hostName, 2810);
+				Manager mgr = GrxRTMUtil.findRTCmanager(hostName, managerPort_);
 				if ( mgr == null ) {
 					System.out.println("cant find rtc manager on "+hostName + "("+ robotPort_ + ")");
 				}
@@ -387,8 +392,8 @@ boolean isTest = false;
 					}
 					System.out.println(model.getName() + " on " + hostName + " ...");
 				}
-				
 				System.out.println("\nconnecting components");
+				
 				// Connect Data ports
 				Iterator<DataportConnector> connectors = currentSystem.getDataPortConnectors().iterator();
 				while ( connectors.hasNext() ) {
@@ -429,7 +434,9 @@ boolean isTest = false;
 						}
 					}
 					GrxRTMUtil.serializeComponents(rtcs);
+					ec.setState(RTComponentItem.RTC_SLEEP);
 					GrxRTMUtil.activateComponents(rtcs);
+					ec.setState(RTComponentItem.RTC_ACTIVE);
 				}
 				
 				System.out.println("\nInitialized successfully");
@@ -494,7 +501,53 @@ boolean isTest = false;
 
 	private void checkState()
 	{
-		
+		if ( currentSystem != null ) {
+			NamingContext rnc = GrxRTMUtil.getRootNamingContext(cmbRobotHost_.getText(), robotPort_);
+			Iterator<ExecutionContextItem> ecs = currentSystem.getExecutionContexts().iterator();
+			//RTM.Manager mgr = GrxRTMUtil.findRTCmanager(cmbRobotHost_.getText(), managerPort_);
+			// TODO check manager and monitor
+			while ( ecs.hasNext() ) {
+				ExecutionContextItem ec = ecs.next();
+				RTObject ecOwner = null;
+				BenchmarkService bmSVC =  null;
+				try {
+					ec.setState(RTComponentItem.RTC_NOT_EXIST);
+					ecOwner = GrxRTMUtil.findRTC(ec.getOwnerName(), rnc);
+					if ( ecOwner != null ) {
+						ec.setState(RTComponentItem.RTC_SLEEP);
+						bmSVC = BenchmarkServiceHelper.narrow(ecOwner.get_sdo_service("BenchmarkService_EC0"));
+						if ( bmSVC != null ) {
+							ec.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+						}
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				} finally {
+					if ( ecOwner != null) {
+						ecOwner._release();
+					}
+					if ( bmSVC != null ) {
+						bmSVC._release();
+					}
+				}
+				Iterator<TreeModelItem> items = ec.getChildren().iterator();
+				while ( items.hasNext() ) {
+					RTComponentItem rtcItem = (RTComponentItem)items.next();
+					rtcItem.setState(RTComponentItem.RTC_NOT_EXIST);
+					RTObject rtc = GrxRTMUtil.findRTC(rtcItem.getName(), rnc);
+					if ( rtc != null ) {
+						rtcItem.setState(RTComponentItem.RTC_SLEEP);
+						if ( rtc.is_alive(ecOwner.get_owned_contexts()[0]) ) {
+							if ( bmSVC == null ) {
+								rtcItem.setState(RTComponentItem.RTC_ACTIVE);
+							} else {
+								rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 	
 	public class UpdateLogThread implements Runnable
@@ -523,11 +576,14 @@ boolean isTest = false;
 				l.add(getLogs(eclist.get(i), rnc));
 			}
 			for (int i=0; i<eclist.size(); i++) {
-				setLogs(eclist.get(i), rnc, l.get(i));
+				if ( l.get(i) != null ) {
+					setLogs(eclist.get(i), rnc, l.get(i));
+				}
 			}
 			GrxRTMUtil.releaseObject(rnc);
 			rtsViewer.refresh();
 			TimingChartView.getInstance().updateCharts();
+			checkState();
 		}
 		return ret;
 	}
@@ -538,13 +594,13 @@ boolean isTest = false;
 		BenchmarkService bmSVC = null;
 		try {
 			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
-			bmSVC =  BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
-			return bmSVC.get_logs();
-		} catch (InvalidParameter e) {
-			e.printStackTrace();
-		} catch (NotAvailable e) {
-			e.printStackTrace();
-		} catch (InternalError e) {
+			if ( rtc != null ) {
+				bmSVC =  BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
+				if ( bmSVC != null ) {
+					return bmSVC.get_logs();
+				}	
+			}
+		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
 			GrxRTMUtil.releaseObject(rtc);
@@ -562,13 +618,14 @@ boolean isTest = false;
 			double cycle = 1.0/ecModel.getRate();
 			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
 			bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
+			//ecModel.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
 			
 			PlatformInfo pInfo = bmSVC.get_platform_info();
 			// update logs
 			Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
 			while ( it.hasNext() ) {
 				RTComponentItem model = (RTComponentItem)it.next();
-				model.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+				//model.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
 				BenchmarkResultItem result = model.getResult();
 				result.setCycle(cycle);
 				result.updatePlatformInfo(pInfo);
@@ -581,14 +638,7 @@ boolean isTest = false;
 			}
 			ecModel.calcSummation();
 			return true;
-		} catch (InvalidParameter e) {
-			e.printStackTrace();
-		} catch (NotAvailable e) {
-			e.printStackTrace();
-		} catch (InternalError e) {
-			e.printStackTrace();
 		} catch (Exception e) {
-			System.out.println("EC:" + ecModel.getName() + " is not available.");
 			e.printStackTrace();
 		} finally {
 			GrxRTMUtil.releaseObject(rtc);
