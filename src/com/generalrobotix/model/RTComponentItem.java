@@ -95,14 +95,17 @@ public class RTComponentItem extends TreeModelItem
 	
 	static public class RTCConnection 
 	{
-		public RTCConnection(RTComponentItem source, RTComponentItem target) {
-			this.source = source;
-			this.target = target;
-		}
 		public RTComponentItem source;
 		public RTComponentItem target;
 		
-		public boolean equals(RTCConnection con) {
+		public RTCConnection(RTComponentItem source, RTComponentItem target)
+		{
+			this.source = source;
+			this.target = target;
+		}
+		
+		public boolean equals(RTCConnection con)
+		{
 			return (source.equals(con.source) && target.equals(con.target));
 		}
 	}

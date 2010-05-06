@@ -81,8 +81,6 @@ private Action actTest;
 	private int robotPort_ = 2809;
 	private int managerPort_ = 2810;
 	private int loggingInterval_ = DEFAULT_LOGGING_INTERVAL;
-	private NamingContext rootNC_;
-	private RTM.Manager manager_;
 	
 	boolean isTest = false;	
     
@@ -576,9 +574,7 @@ private Action actTest;
 				l.add(getLogs(eclist.get(i), rnc));
 			}
 			for (int i=0; i<eclist.size(); i++) {
-				if ( l.get(i) != null ) {
-					setLogs(eclist.get(i), rnc, l.get(i));
-				}
+				setLogs(eclist.get(i), rnc, l.get(i));
 			}
 			GrxRTMUtil.releaseObject(rnc);
 			rtsViewer.refresh();
@@ -617,22 +613,26 @@ private Action actTest;
 			// get information from target system
 			double cycle = 1.0/ecModel.getRate();
 			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
-			bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
-			//ecModel.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
-			
-			PlatformInfo pInfo = bmSVC.get_platform_info();
+			PlatformInfo pInfo = null;
+			if ( logs != null ) {
+				bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
+				pInfo = bmSVC.get_platform_info();
+			}
 			// update logs
 			Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
 			while ( it.hasNext() ) {
 				RTComponentItem model = (RTComponentItem)it.next();
-				//model.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
 				BenchmarkResultItem result = model.getResult();
-				result.setCycle(cycle);
-				result.updatePlatformInfo(pInfo);
-				for (int i=0; i<logs.length; i++) {
-					if ( logs[i].id.equals(model.getName()) ) {
-						result.updateLog(logs[i]);
-						break;
+				if ( logs == null ) {
+					result.resetLastLog();
+				} else {
+					result.setCycle(cycle);
+					result.updatePlatformInfo(pInfo);
+					for (int i=0; i<logs.length; i++) {
+						if ( logs[i].id.equals(model.getName()) ) {
+							result.updateLog(logs[i]);
+							break;
+						}
 					}
 				}
 			}
