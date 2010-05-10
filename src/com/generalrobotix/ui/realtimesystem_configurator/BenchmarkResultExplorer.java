@@ -3,9 +3,9 @@ package com.generalrobotix.ui.realtimesystem_configurator;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
@@ -13,12 +13,12 @@ import java.io.UnsupportedEncodingException;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.core.resources.IContainer;
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.resources.IProject;
@@ -32,12 +32,12 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.CheckStateChangedEvent;
-import org.eclipse.jface.viewers.CheckboxTreeViewer;
-import org.eclipse.jface.viewers.ICheckStateListener;
-import org.eclipse.jface.viewers.ITableLabelProvider;
+import org.eclipse.jface.viewers.DoubleClickEvent;
+import org.eclipse.jface.viewers.IDoubleClickListener;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.TreeSelection;
+import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
@@ -50,7 +50,9 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
-import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.ui.IEditorInput;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.ho.yaml.Yaml;
@@ -65,7 +67,7 @@ public class BenchmarkResultExplorer extends ViewPart
 {
 	private IProject project;
 	private TreeModelItem rootItem = new TreeModelItem();
-	private CheckboxTreeViewer resultViewer;
+	private TreeViewer resultViewer;
 	private NullProgressMonitor progress;
 	private FileDialog fdlg;
 	private List<Action> actionList = new ArrayList<Action>();
@@ -126,6 +128,7 @@ public class BenchmarkResultExplorer extends ViewPart
 
 		// TODO show dialog to confirm create project
 		project = getProject();
+		resultViewer.setInput(project.getLocation().toFile());
 		updateList();
 	}
 
@@ -157,52 +160,92 @@ public class BenchmarkResultExplorer extends ViewPart
 		}
 		return ret;
 	}
-
+	
+	private List<IFolder> findFolder(IContainer container, String name)
+	{
+		List<IFolder> ret = new ArrayList<IFolder>();
+		try {
+			IResource[] members = container.members();
+			for (int i=0; i<members.length; i++) {
+				if ( members[i].getType() == IResource.FOLDER && (name == null || name.equals(members[i].getName())) ) {
+					ret.add((IFolder)members[i]);
+				}
+			}
+		} catch (CoreException e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+	
+	private List<IFile> findFile(IContainer container, String name, String ext)
+	{
+		List<IFile> ret = new ArrayList<IFile>();
+		try {
+			IResource[] members = container.members();
+			for (int i=0; i<members.length; i++) {
+				if ( members[i].getType() == IResource.FILE  && 
+						(name == null || name.equals(members[i].getName())) &&
+						(ext  == null || ext.equals(members[i].getFileExtension()))) {
+					ret.add((IFile)members[i]);
+				}
+			}
+		} catch (CoreException e) {
+			e.printStackTrace();
+		}
+		return ret;
+	}
+	
 	private void updateList() 
 	{
-		File[] files = project.getLocation().toFile().listFiles();
-		for (int i=0; files != null && i<files.length; i++) {
-			if ( files[i].isDirectory() ) {
-				File[] systemprofiles = files[i].listFiles(new FilenameFilter(){
-					public boolean accept(File file, String name)
-					{
-						return ( name.endsWith(".xml") );
-					}
-				});
-				if ( systemprofiles.length > 0 ) {
-					RTSystemItem rts = new RTSystemItem(systemprofiles[0].getAbsolutePath());
-					rootItem.add(rts);
-					
-					// load result
-					try {
-						IFolder folder = project.getFolder(rts.getId());
-						if ( folder.findMember(LOG_FILE_NAME, false) != null ) {
-							IFile file = folder.getFile(LOG_FILE_NAME);
-							Map<String, BenchmarkResultItem> ret = fromYaml(file);
-							if ( ret != null ) {
-								Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
-								while(rtcs.hasNext()) {
-									RTComponentItem rtc = rtcs.next();
-									rtc.setResult(ret.get(rtc.getId()));
-									double cycle = 1.0/rtc.getComponent().getExecutionContexts().get(0).getRate();
-									rtc.getResult().setCycle(cycle);
-								}
-							}
+		
+		rootItem.removeAll();
+		Iterator<IFolder> folders = findFolder(project, null).iterator();
+		while ( folders.hasNext() ) {
+			IFolder folder = folders.next();
+			List<IFile> files = findFile(folder, null, "xml");
+			if ( files.size() > 0 ) {
+				IFile file = files.get(0);
+				try {
+					IEditorInput fileInput = new FileEditorInput(file);
+					getSite().getPage().openEditor(fileInput, "jp.go.aist.rtm.systemeditor.ui.editor.SystemDiagramEditor");
+				} catch (PartInitException e) {
+					e.printStackTrace();
+				}
+				
+				RTSystemItem rts = new RTSystemItem(file.getLocation().toFile().getAbsolutePath());
+				rootItem.add(rts);
+				
+				// load results
+				IFolder resultsDir = findFolder(folder, "results").get(0);
+				Iterator<IFile> results = findFile(resultsDir, null, "yaml").iterator();
+				while ( results.hasNext() ) {
+					IFile resultFile = results.next();
+					Map<String, BenchmarkResultItem> ret = fromYaml(resultFile);
+					TreeModelItem resultItem = new TreeModelItem();
+					resultItem.setName(resultFile.getName());
+					rootItem.add(resultItem);
+					if ( ret != null ) {
+						Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
+						while(rtcs.hasNext()) {
+							RTComponentItem rtc = rtcs.next();
+							rtc.setResult(ret.get(rtc.getId()));
+							double cycle = 1.0/rtc.getComponent().getExecutionContexts().get(0).getRate();
+							rtc.getResult().setCycle(cycle);
 						}
-					} catch (Exception e) {
-						System.out.println("Exception occured during loading log file.");
 					}
-					// calculate summation
-					Iterator<RTComponentItem> it = rts.getRTCMembers().iterator();
-					while ( it.hasNext() ) {
-						RTComponentItem model = it.next();
-						if ( model instanceof ExecutionContextItem ) {
-							((ExecutionContextItem)model).calcSummation();
-						}
+				}
+				
+				// calculate summation
+				Iterator<RTComponentItem> it = rts.getRTCMembers().iterator();
+				while ( it.hasNext() ) {
+					RTComponentItem model = it.next();
+					if ( model instanceof ExecutionContextItem ) {
+						((ExecutionContextItem)model).calcSummation();
 					}
 				}
 			}
 		}
+		
 		resultViewer.refresh();
 	}
 	
@@ -239,81 +282,30 @@ public class BenchmarkResultExplorer extends ViewPart
 		}
 	};
 
-	private class ViewContentProvider implements ITreeContentProvider
-	{
-
-		public void inputChanged(Viewer v, Object oldInput, Object newInput) {}
-		public void dispose() {}
-		
-		public Object[] getElements(Object parent)
-		{
-			return ((TreeModelItem)parent).getChildren().toArray();
-		}
-		
-		public Object[] getChildren(Object parentElement)
-		{
-		    return ((TreeModelItem)parentElement).getChildren().toArray();
-		}
-		
-		public Object getParent(Object element)
-		{
-			return ((TreeModelItem)element).getParent();
-		}
-		
-		public boolean hasChildren(Object element)
-		{
-			return (getChildren(element).length > 0);
-		}
-	}
-	
-	private class ViewLabelProvider extends LabelProvider implements ITableLabelProvider
+	private class ViewLabelProvider extends LabelProvider //implements ITableLabelProvider
 	{
 	    private HashMap<ImageDescriptor, Image> imageMap;
 
-		public String getColumnText(Object obj, int index)
+		public String getText(Object obj)
 		{
-			try {				
-				TreeModelItem item = (TreeModelItem)obj;
-				switch(index) {
-				case 0:
-					return item.getName();
-				case 1:
-					if ( item instanceof RTSystemItem ) {
-						return ((RTSystemItem)item).getVersion();
-					}
-					return "-";
-				case 2:
-					if ( item instanceof RTComponentItem ) {
-						BenchmarkResultItem result = ((RTComponentItem)item).getResult();
-						if ( result.date != null ) {
-							return FORMAT_DATE1.format(result.date);
-						}
-					}
-					return "-";
-				default:
-					break;
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			return "";
-		}
-		
-		public Image getColumnImage(Object obj, int index)
-		{
-			if ( index == 0 ) {
-				return getImage(obj);
-			}
-			return null;
-		}
+			File file = (File)obj;
+			String name = file.getName();
+		    if(name.equals("")){
+		    	name = file.getPath();
+		    }
+		    return name;
+		}		    
 		
 	    public Image getImage(Object element)
 	    {
-	        if ( element instanceof TreeModelItem ) {
-	            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), ((TreeModelItem)element).getIconPath());
-	            return cacheImage(desc);
+	    	String path = null;
+	        if ( ((File)element).isDirectory() ) {
+	        	path = "icons/folder.gif";
+	        } else {
+	        	path = "icons/file.gif";
 	        }
-	        return null;
+            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), path);
+            return cacheImage(desc);
 	    }
 
 		Image cacheImage(ImageDescriptor desc)
@@ -342,13 +334,29 @@ public class BenchmarkResultExplorer extends ViewPart
 	    }
 	}
 	
-	private CheckboxTreeViewer setupTreeViewer(Composite parent)
+	private TreeViewer setupTreeViewer(Composite parent)
 	{
-		CheckboxTreeViewer viewer = new CheckboxTreeViewer(parent, SWT.NONE);
-		viewer.setContentProvider(new ViewContentProvider());
+		TreeViewer viewer = new TreeViewer(parent, SWT.NONE);
+		viewer.setContentProvider(new ExplorerContentProvider());
 		viewer.setLabelProvider(new ViewLabelProvider());
-		viewer.setInput(rootItem);
-		viewer.addCheckStateListener(new ICheckStateListener()
+		viewer.addDoubleClickListener(new IDoubleClickListener()
+		{
+			@Override
+			public void doubleClick(DoubleClickEvent event)
+			{
+				Object src = ((TreeSelection)event.getSelection()).getFirstElement();
+				if ( src instanceof File ) {
+					File f = (File)src;
+					if ( f.getName().endsWith(".xml") ) {
+						System.out.println("OpenSystem");
+					} else if (f.getName().endsWith(".yaml")) {
+						System.out.println("OpenSystem with the result");
+					}
+				}
+			}	
+		});
+		//viewer.setInput(rootItem);
+		/*viewer.addCheckStateListener(new ICheckStateListener()
 		{
 			public void checkStateChanged(CheckStateChangedEvent event)
 			{
@@ -375,27 +383,15 @@ public class BenchmarkResultExplorer extends ViewPart
 				checkedObjects = Arrays.asList(resultViewer.getCheckedElements());
 				item.getRoot().setCheckedItems(checkedObjects.toArray(new TreeModelItem[0]));
 			}
-		});
+		})*/;
 		
 		Tree tree = viewer.getTree();
 		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
-		tree.setHeaderVisible(true);
 		tree.setLinesVisible(true);
-		int idx = 0;
-		setHeader(tree, SWT.LEFT, idx++, 250, "RTSystem Name");
-		setHeader(tree, SWT.LEFT, idx++,  50, "Ver.");
-		setHeader(tree, SWT.LEFT, idx++, 200, "Date");
 		
 		return viewer;
 	}
 	
-	private void setHeader(Tree tree, int alignment, int index, int width, String text)
-	{
-		TreeColumn column = new TreeColumn(tree, alignment, index);
-		column.setText(text);
-		column.setWidth(width);
-	}
-
 	private void importProfile(String fname) 
 	{
 		if ( fname != null && fname != "" ) {
@@ -523,5 +519,49 @@ public class BenchmarkResultExplorer extends ViewPart
 		{
 			return org.eclipse.swt.dnd.FileTransfer.getInstance().isSupportedType(transferType);
 		} 
-	} 
+	}
+	
+	public class ExplorerContentProvider implements ITreeContentProvider
+	{
+		public Object[] getChildren(Object parentElement)
+		{
+			FileFilter filter = new FileFilter() 
+			{
+				@Override
+				public boolean accept(File f) 
+				{
+					if ( f.getName().startsWith(".") ) {
+						return false;
+					}
+					return true;
+				}
+				
+			};
+			File[] children = ((File)parentElement).listFiles(filter);
+		    return ( children == null ) ? new Object[0] : children;
+		}   
+
+		public Object getParent(Object element)
+		{
+			return ((File)element).getParentFile();
+		}   
+
+		public boolean hasChildren(Object element)
+		{
+			return ( getChildren(element).length == 0 ) ? false : true;
+		}   
+
+		public Object[] getElements(Object element)
+		{
+			return getChildren(element);
+		}   
+
+		public void dispose() 
+		{
+		}
+
+		public void inputChanged(Viewer viewer, Object oldInput, Object newInput)
+		{
+		}
+	}
 }
