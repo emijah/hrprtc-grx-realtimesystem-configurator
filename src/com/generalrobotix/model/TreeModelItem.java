@@ -20,32 +20,39 @@ public class TreeModelItem implements IPropertySource {
 	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
 	protected String iconpath = null;
 	
-	public String getName() {
+	public String getName()
+	{
 		return nodeName;
 	}
 	
-	protected void setName(String name) {
+	public void setName(String name)
+	{
 		nodeName = name;
 		properties.put("name", name);
 	}
 	
-	public String toString() {
+	public String toString()
+	{
 		return getName();
 	}
 	
-	public String getIconPath() {
+	public String getIconPath()
+	{
 		return iconpath;
 	}
 	
-	public void setIconPath(String path) {
+	public void setIconPath(String path)
+	{
 		iconpath = path;
 	}
 	
-	public TreeModelItem getRoot() {
+	public TreeModelItem getRoot()
+	{
 		return root;
 	}
 	
-	protected void setRoot(TreeModelItem item) {
+	protected void setRoot(TreeModelItem item)
+	{
 		root = item;
 		Iterator<TreeModelItem> it = getChildren().iterator();
 		while ( it.hasNext() ) {
@@ -54,27 +61,33 @@ public class TreeModelItem implements IPropertySource {
 		properties.put("root", root.toString());
 	}
 	
-	public boolean isRoot() {
+	public boolean isRoot()
+	{
 		return ( root == null );
 	}
 	
-	public boolean hasParent() {
+	public boolean hasParent()
+	{
 		return ( parent != null );
 	}
 	
-	public TreeModelItem getParent(){
+	public TreeModelItem getParent()
+	{
 		return parent;
 	}
 	
-	public List<TreeModelItem> getChildren(){
+	public List<TreeModelItem> getChildren()
+	{
 		return children;
 	}
 		
-	public boolean hasChildren() {
+	public boolean hasChildren()
+	{
 		return (this.children.size() > 0);
 	}
 
-	public void add(TreeModelItem model) {
+	public void add(TreeModelItem model)
+	{
 		children.add(model);
 		if ( model.parent != null ) {
 			model.parent.children.remove(model);
@@ -83,23 +96,32 @@ public class TreeModelItem implements IPropertySource {
 		model.setRoot(getRoot());
 	}
 	
-	public void setCheckedItems(TreeModelItem[] list) {
+	public void removeAll()
+	{
+		children.clear();
+	}
+	
+	public void setCheckedItems(TreeModelItem[] list)
+	{
 		checkedItems.clear();
 		checkedItems.addAll(Arrays.asList(list));
 	}
 	
-	public List<TreeModelItem> getCheckedItems() {
+	public List<TreeModelItem> getCheckedItems()
+	{
 		return checkedItems;
 	}
 
-	public Object getEditableValue() {
+	public Object getEditableValue()
+	{
 		// TODO Auto-generated method stub
 		return null;
 	}
 	
 	private IPropertyDescriptor[] propertyDescriptors;
 	
-	public IPropertyDescriptor[] getPropertyDescriptors() {
+	public IPropertyDescriptor[] getPropertyDescriptors()
+	{
 		Object[] keys = properties.keySet().toArray();
 		if ( propertyDescriptors == null ) {
 			propertyDescriptors = new IPropertyDescriptor[keys.length];
@@ -110,24 +132,27 @@ public class TreeModelItem implements IPropertySource {
 		return propertyDescriptors;
 	}
 
-	public Object getPropertyValue(Object id) {
+	public Object getPropertyValue(Object id)
+	{
 		return properties.get(id);
 	}
 
-	public boolean isPropertySet(Object id) {
-		// TODO Auto-generated method stub
+	public boolean isPropertySet(Object id)
+	{
 		return false;
 	}
 
-	public void resetPropertyValue(Object id) {
-		// TODO Auto-generated method stub
+	public void resetPropertyValue(Object id)
+	{
 	}
 
-	public void setPropertyValue(Object id, Object value) {
+	public void setPropertyValue(Object id, Object value)
+	{
 		properties.put(id, value);		
 	}
 	
-	public Map<Object, Object> getPropertyMap() {
+	public Map<Object, Object> getPropertyMap()
+	{
 		return properties;
 	}
 }

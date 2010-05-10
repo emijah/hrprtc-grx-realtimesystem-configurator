@@ -66,6 +66,7 @@ public class BenchmarkOperatorView extends ViewPart {
 private Action actTest;	
 	private TreeViewer rtsViewer;
 	private Button btnUpdate;
+	private Combo cmbRTSystem_;
 	private Combo cmbInterval_;
 	private Combo cmbRobotHost_;
 	
@@ -96,8 +97,10 @@ private Action actTest;
 	public void createPartControl(Composite parent)
 	{		
 		parent.setLayout(new GridLayout(1, false));
-		final Text text = new Text(parent, SWT.NONE);
-		text.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+		
+		cmbRTSystem_ = new Combo(parent, SWT.NONE);
+		cmbRTSystem_.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
+		
 		rtsViewer = setupTreeViewer(parent);
 		
 		Composite btnPanel = new Composite(parent, SWT.NONE);
@@ -183,7 +186,7 @@ private Action actTest;
 	        		if ( sel.size() > 0 && sel.get(0) instanceof RTSystemItem ) {
 	        			currentSystem = ((RTSystemItem)sel.get(0));
 	        			rtsViewer.setInput(currentSystem);
-	        			text.setText(currentSystem.getName()+":"+currentSystem.getVersion());
+	        			cmbRTSystem_.setText(currentSystem.getName()+":"+currentSystem.getVersion());
 	        		}
 	            }
 	        }
