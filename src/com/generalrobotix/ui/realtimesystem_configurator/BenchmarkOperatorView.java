@@ -180,10 +180,25 @@ private Action actTest;
 	        {
 	        	if (sourcepart != BenchmarkOperatorView.this && selection instanceof IStructuredSelection) {
 	        		List sel = ((IStructuredSelection) selection).toList();
-	        		if ( sel.size() > 0 && sel.get(0) instanceof RTSystemItem ) {
-	        			currentSystem = ((RTSystemItem)sel.get(0));
-	        			rtsViewer.setInput(currentSystem);
-	        			text.setText(currentSystem.getName()+":"+currentSystem.getVersion());
+	        		if ( sel.size() > 0 ) {
+	        			TreeModelItem item = (TreeModelItem) sel.get(0);
+	        			List<TreeModelItem> children = item.getChildren();
+	        			if ( children.size() > 0 && children.get(0) instanceof RTSystemItem ) {
+	        				currentSystem = (RTSystemItem)children.get(0);
+	        				rtsViewer.setInput(currentSystem);
+	        				text.setText(currentSystem.getId());
+	        			} else {
+	        				Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
+	        				while( it.hasNext() ) {
+	        					TreeModelItem m = it.next();
+	        					if ( m instanceof RTSystemItem ) {
+	        						currentSystem = (RTSystemItem)m;
+	        						rtsViewer.setInput(currentSystem);
+	        						text.setText(currentSystem.getId());
+	        						break;
+	        					}
+	        				}
+	        			}
 	        		}
 	            }
 	        }
@@ -241,6 +256,9 @@ private Action actTest;
 		public String getColumnText(Object obj, int index)
 		{
 			try {				
+				if ( !(obj instanceof RTComponentItem) ) {
+					return null;
+				}
 				RTComponentItem model = (RTComponentItem)obj;
 				BenchmarkResultItem result = model.getResult();
 				switch(index) {
@@ -301,8 +319,10 @@ private Action actTest;
 	    {
 	        if (element instanceof TreeModelItem ) {
 	        	String path = ((TreeModelItem)element).getIconPath();
-	            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), path);
-	            return cacheImage(desc);
+	        	if ( path != null ) {
+	        		ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), path);
+	            	return cacheImage(desc);
+	        	}
 	        }
 	        return null;
 	    }

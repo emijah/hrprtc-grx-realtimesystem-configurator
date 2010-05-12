@@ -1,5 +1,6 @@
 package com.generalrobotix.model;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -19,6 +20,7 @@ public class RTSystemItem extends TreeModelItem
 {
     private XmlHandler rtsProfileOperator = new XmlHandler();
 	private RtsProfileExt profile;
+	private File file;
 	private List<RTComponentItem> members;
 	private List<RTCConnection> rtcConnections;
 	private List<ExecutionContextItem> eclist;
@@ -37,12 +39,19 @@ public class RTSystemItem extends TreeModelItem
 		return profile.getId();
 	}
 	
+	public File getFilePath()
+	{
+		return file;
+	}
+	
 	private void load(String fname)
 	{
 	   	try {
+	   		file = null;
 			profile = rtsProfileOperator.loadXmlRts(fname);
 	    	String[] ids = profile.getId().split(":");
 	    	setName(ids[1].substring(ids[1].lastIndexOf(".")+1));
+	    	file = new File(fname).getParentFile();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
