@@ -1,15 +1,21 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
+import org.eclipse.core.resources.IFile;
+import org.eclipse.core.resources.IFolder;
+import org.eclipse.core.runtime.CoreException;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ISelection;
@@ -66,6 +72,7 @@ public class BenchmarkOperatorView extends ViewPart {
 private Action actTest;	
 	private TreeViewer rtsViewer;
 	private Button btnUpdate;
+	private Button btnSave;
 	private Combo cmbInterval_;
 	private Combo cmbRobotHost_;
 	
@@ -77,6 +84,7 @@ private Action actTest;
     private static final int DEFAULT_LOGGING_INTERVAL = 1000;
 	private static final DecimalFormat FORMAT_MSEC = new DecimalFormat(" 0.000;-0.000");
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+	private static final SimpleDateFormat FORMAT_DATE2 = new SimpleDateFormat("yyyyMMddHHmmss");
 	
 	private int robotPort_ = 2809;
 	private int managerPort_ = 2810;
@@ -140,7 +148,8 @@ private Action actTest;
 			public void widgetSelected(SelectionEvent e)
 			{
 				if ( ((Button)e.getSource()).getSelection() ) {
-					resetLastLogs();
+					//resetLastLogs();
+					resetLogAction();
 					Display display = Display.getCurrent();
 					if ( !display.isDisposed() ) {
 						display.timerExec(100, new UpdateLogThread());
@@ -173,6 +182,21 @@ private Action actTest;
 		cmbRobotHost_ = new Combo(btnPanel, SWT.NONE);
 		cmbRobotHost_.add("localhost");
 		cmbRobotHost_.select(0);
+		
+		btnSave = new Button(btnPanel, SWT.NONE);
+		btnSave.setText("Save");
+		btnSave.addSelectionListener(new SelectionListener()
+		{
+			@Override
+			public void widgetDefaultSelected(SelectionEvent e) {}
+
+			@Override
+			public void widgetSelected(SelectionEvent e)
+			{
+				save();
+			}
+			
+		});
 
 		// Catch selection event from BenchmarkResultExplorer
 		getSite().getPage().addSelectionListener(new ISelectionListener() {
@@ -187,6 +211,7 @@ private Action actTest;
 	        				currentSystem = (RTSystemItem)children.get(0);
 	        				rtsViewer.setInput(currentSystem);
 	        				text.setText(currentSystem.getId());
+	        				rtsViewer.expandAll();
 	        			} else {
 	        				Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
 	        				while( it.hasNext() ) {
@@ -195,6 +220,7 @@ private Action actTest;
 	        						currentSystem = (RTSystemItem)m;
 	        						rtsViewer.setInput(currentSystem);
 	        						text.setText(currentSystem.getId());
+	        						rtsViewer.expandAll();
 	        						break;
 	        					}
 	        				}
@@ -484,19 +510,6 @@ private Action actTest;
 		return ret;
 	}
 	
-	private void connectComp()
-	{
-		//IProject proj = BenchmarkResultExplorer.getInstance().getProject();		
-		//List<String> args = new ArrayList<String>();
-		//args.add(e);
-		//execPython(proj.getLocation().toString()+"/scripts", "startup", args);
-	}
-	
-	private void generateSetupScript()
-	{
-		
-	}
-	
 	private void resetLogAction() 
 	{
 		if ( currentSystem != null ) {
@@ -686,6 +699,25 @@ private Action actTest;
 			}
 		} catch (IOException e1) {
 			e1.printStackTrace();
+		}
+	}
+	
+	private void save()
+	{
+		IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder(currentSystem.getId()+"/results");
+		IFile   file = folder.getFile(FORMAT_DATE2.format(new Date())+".yaml");
+		try {
+			if ( !file.exists() ) {
+				file.create(null, false, null);
+			}
+			file.setContents(new ByteArrayInputStream(currentSystem.toYaml().getBytes("UTF-8")), true, false, null);
+			BenchmarkResultExplorer.getInstance().updateList();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} catch (CoreException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 }

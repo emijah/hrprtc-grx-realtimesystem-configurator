@@ -38,7 +38,7 @@ public class BenchmarkResultItem extends TreeModelItem
 	public double cycle = 0;
 	public List<Double> lastLog_ = new ArrayList<Double>();
 	
-	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
+	public Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
 	private static int LOG_CAPACITY = 500;
 	private int logCapacity = LOG_CAPACITY;
 

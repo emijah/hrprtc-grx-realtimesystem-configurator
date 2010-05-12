@@ -2,11 +2,14 @@ package com.generalrobotix.model;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import jp.go.aist.rtm.toolscommon.profiles.util.XmlHandler;
 
+import org.ho.yaml.Yaml;
 import org.openrtp.namespaces.rts.version02.Component;
 import org.openrtp.namespaces.rts.version02.DataportConnector;
 import org.openrtp.namespaces.rts.version02.Participants;
@@ -158,5 +161,17 @@ public class RTSystemItem extends TreeModelItem
 	public String getVersion()
 	{
 		return version;
+	}
+	
+	public String toYaml()
+	{
+		Map<String, BenchmarkResultItem> resultMap = new HashMap<String, BenchmarkResultItem>();
+		Iterator<RTComponentItem> rtcs = getRTCMembers().iterator();
+		while (rtcs.hasNext()) {
+			RTComponentItem rtc = rtcs.next();
+			resultMap.put(rtc.getId(), rtc.getResult());
+		}
+		String result = Yaml.dump(resultMap);
+		return result;
 	}
 } 
