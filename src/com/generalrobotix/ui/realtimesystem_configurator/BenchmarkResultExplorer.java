@@ -1,7 +1,6 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
 import java.io.BufferedReader;
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -13,7 +12,6 @@ import java.io.UnsupportedEncodingException;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -32,13 +30,8 @@ import org.eclipse.jface.action.IMenuManager;
 import org.eclipse.jface.action.IToolBarManager;
 import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
-import org.eclipse.jface.viewers.CheckStateChangedEvent;
-import org.eclipse.jface.viewers.CheckboxTreeViewer;
 import org.eclipse.jface.viewers.DoubleClickEvent;
-import org.eclipse.jface.viewers.ICheckStateListener;
 import org.eclipse.jface.viewers.IDoubleClickListener;
-import org.eclipse.jface.viewers.ISelection;
-import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
 import org.eclipse.jface.viewers.StructuredSelection;
@@ -56,8 +49,6 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
-import org.eclipse.swt.widgets.TreeColumn;
-import org.eclipse.ui.dialogs.ContainerCheckedTreeViewer;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.ho.yaml.Yaml;
@@ -80,7 +71,6 @@ public class BenchmarkResultExplorer extends ViewPart
 
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 	private static final String REALTIME_SYSTEM_PROJECT_NAME = "RealtimeSystemProjects";
-	private static final String LOG_FILE_NAME = "result.yaml";
 
 	public BenchmarkResultExplorer() 
 	{
@@ -105,7 +95,6 @@ public class BenchmarkResultExplorer extends ViewPart
 		resultViewer.addDropSupport(DND.DROP_COPY | DND.DROP_MOVE, transfers, new MyViewerDropListener(resultViewer));
 		
 		actionList.add(new ImportAction());
-		actionList.add(new SaveAction());
 
 		MenuManager menuManager = new MenuManager("#PopupMenu");
 		menuManager.setRemoveAllWhenShown(true);
@@ -132,13 +121,18 @@ public class BenchmarkResultExplorer extends ViewPart
 		}
 
 		// TODO show dialog to confirm create project
-		project = getProject(REALTIME_SYSTEM_PROJECT_NAME);
+		project = getProject();
 		updateList();
 	}
 
 	@Override
 	public void setFocus()
 	{
+	}
+	
+	public IProject getProject()
+	{
+		return getProject(REALTIME_SYSTEM_PROJECT_NAME);
 	}
 	
 	private IProject getProject(String projectName)
@@ -160,8 +154,9 @@ public class BenchmarkResultExplorer extends ViewPart
 		return ret;
 	}
 
-	private void updateList() 
+	public void updateList() 
 	{
+		rootItem.removeChildren();
 		File[] files = project.getLocation().toFile().listFiles();
 		for (int i=0; files != null && i<files.length; i++) {
 			if ( files[i].isDirectory() ) {
@@ -196,13 +191,14 @@ public class BenchmarkResultExplorer extends ViewPart
 			}
 		}
 		resultViewer.refresh();
+		resultViewer.expandAll();
 	}
 	
 	private void loadResult(String filename, RTSystemItem rts)
 	{
 		// load result
 		try {
-			IFolder folder = project.getFolder(rts.getId());
+			IFolder folder = project.getFolder(rts.getId()+"/results");
 			if ( folder.findMember(filename, false) != null ) {
 				IFile file = folder.getFile(filename);
 				Map<String, BenchmarkResultItem> ret = fromYaml(file);
@@ -248,20 +244,6 @@ public class BenchmarkResultExplorer extends ViewPart
 		}
 	};
 	
-	private class SaveAction extends Action
-	{
-		public SaveAction() 
-		{
-			setText("Save All Benchmark Results");
-			setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/save.png"));
-		}
-	
-		public void run()
-		{
-			save();
-		}
-	};
-
 	private class ViewContentProvider implements ITreeContentProvider
 	{
 
@@ -378,38 +360,6 @@ public class BenchmarkResultExplorer extends ViewPart
             }
         });
 
-		/*viewer.addCheckStateListener(new ICheckStateListener()
-		{
-			public void checkStateChanged(CheckStateChangedEvent event)
-			{
-				boolean isSelected = event.getChecked();
-				Object selected = event.getElement();
-				if ( selected instanceof TreeModelItem ) {
-					TreeModelItem item = (TreeModelItem)selected;
-					//resultViewer.setSubtreeChecked(item, isSelected);
-					List<Object> checkedObjects = Arrays.asList(resultViewer.getCheckedElements());
-					while ( item.hasParent() ) {
-						item = item.getParent();
-						if ( isSelected ) {
-							resultViewer.setChecked(item, true);
-						} else {
-							Iterator<TreeModelItem> children =  item.getChildren().iterator();
-							while ( children.hasNext() ) {
-								if ( checkedObjects.contains(children.next()) ) {
-									isSelected = true;
-									break;
-								}
-							}
-							resultViewer.setChecked(item, isSelected);
-							break;
-						}
-					}
-					checkedObjects = Arrays.asList(resultViewer.getCheckedElements());
-					item.getRoot().setCheckedItems(checkedObjects.toArray(new TreeModelItem[0]));
-				}
-			}
-		});*/
-		
 		Tree tree = viewer.getTree();
 		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
 		tree.setLinesVisible(true);
@@ -460,43 +410,6 @@ public class BenchmarkResultExplorer extends ViewPart
 			}
 			resultViewer.refresh();
 		}
-	}
-	
-	private void save()
-	{
-		Iterator<TreeModelItem> it = rootItem.getChildren().iterator();
-		while ( it.hasNext() ) {
-			TreeModelItem item = it.next();
-			if ( item instanceof RTSystemItem ) {
-				RTSystemItem rts = (RTSystemItem)item;
-				IFolder folder = project.getFolder(rts.getId());
-				IFile   file = folder.getFile(LOG_FILE_NAME);
-				try {
-					if ( !file.exists() ) {
-						file.create(null, false, progress);
-					}
-					file.setContents(new ByteArrayInputStream(toYaml(rts).getBytes("UTF-8")), true, false, progress);
-				} catch (UnsupportedEncodingException e) {
-					e.printStackTrace();
-				} catch (CoreException e) {
-					e.printStackTrace();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-		}
-	}
-	
-	private String toYaml(RTSystemItem rts)
-	{
-		Map<String, BenchmarkResultItem> resultMap = new HashMap<String, BenchmarkResultItem>();
-		Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
-		while (rtcs.hasNext()) {
-			RTComponentItem rtc = rtcs.next();
-			resultMap.put(rtc.getId(), rtc.getResult());
-		}
-		String result = Yaml.dump(resultMap);
-		return result;
 	}
 	
     private Map<String, BenchmarkResultItem> fromYaml(IFile file)

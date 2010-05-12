@@ -92,6 +92,16 @@ public class TreeModelItem implements IPropertySource {
 		model.setRoot(getRoot());
 	}
 	
+	public void removeChild(TreeModelItem child)
+	{
+		children.remove(child);
+	}
+	
+	public void removeChildren()
+	{
+		children.clear();
+	}
+	
 	public void setCheckedItems(TreeModelItem[] list) {
 		checkedItems.clear();
 		checkedItems.addAll(Arrays.asList(list));
