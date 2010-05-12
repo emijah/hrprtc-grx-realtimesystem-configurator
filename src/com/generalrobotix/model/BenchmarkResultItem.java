@@ -2,6 +2,7 @@ package com.generalrobotix.model;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -36,6 +37,7 @@ public class BenchmarkResultItem extends TreeModelItem
 	public double stddev = 0;
 	public double cycle = 0;
 	public List<Double> lastLog_ = new ArrayList<Double>();
+	public Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
 	
 	private static int LOG_CAPACITY = 500;
 	private int logCapacity = LOG_CAPACITY;

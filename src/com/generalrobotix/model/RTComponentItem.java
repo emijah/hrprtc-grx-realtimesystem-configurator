@@ -3,6 +3,7 @@ package com.generalrobotix.model;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.eclipse.ui.views.properties.IPropertyDescriptor;
 import org.openrtp.namespaces.rts.version02.Component;
 
 public class RTComponentItem extends TreeModelItem
@@ -141,5 +142,18 @@ public class RTComponentItem extends TreeModelItem
 	public String getId()
 	{
 		return component.getId();
+	}
+	
+	public IPropertyDescriptor[] getPropertyDescriptors()
+	{
+		Iterator it = getResult().properties.keySet().iterator();
+		while (it.hasNext()) {
+			Object key = it.next();
+			if ( properties.containsKey(key) ) {
+				properties.remove(key);
+			}
+			properties.put(key, getResult().properties.get(key));
+		}
+		return super.getPropertyDescriptors();
 	}
 }
