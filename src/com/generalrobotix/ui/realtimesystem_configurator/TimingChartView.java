@@ -29,6 +29,7 @@ import org.jfree.experimental.chart.swt.ChartComposite;
 
 import com.generalrobotix.model.ExecutionContextItem;
 import com.generalrobotix.model.RTComponentItem;
+import com.generalrobotix.model.RTSystemItem;
 import com.generalrobotix.model.TreeModelItem;
 
 public class TimingChartView extends ViewPart
@@ -85,10 +86,24 @@ public class TimingChartView extends ViewPart
 			{
 				if (part != TimingChartView.this &&	 selection instanceof IStructuredSelection) {
 					List sel = ((IStructuredSelection) selection).toList();
-					if ( sel.size()>0 && sel.get(0) instanceof TreeModelItem ) {
-						selectedItem_ = (TreeModelItem)sel.get(0);
-						updateCharts();
-					}
+	        		if ( sel.size() > 0 ) {
+	        			TreeModelItem item = (TreeModelItem) sel.get(0);
+	        			List<TreeModelItem> children = item.getChildren();
+	        			if ( children.size() > 0 && children.get(0) instanceof RTSystemItem ) {
+	        				selectedItem_ = (RTSystemItem)children.get(0);
+	        				updateCharts();
+	        			} else {
+	        				Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
+	        				while( it.hasNext() ) {
+	        					TreeModelItem m = it.next();
+	        					if ( m instanceof RTSystemItem ) {
+	        						selectedItem_ = (RTSystemItem)m;
+	        						updateCharts();
+	        						break;
+	        					}
+	        				}
+	        			}
+	        		}
 				}
 			}
 		});
@@ -219,17 +234,13 @@ public class TimingChartView extends ViewPart
 	
 	synchronized public void updateCharts()
 	{
-		TreeModelItem root = selectedItem_.getRoot();
-		Iterator<TreeModelItem> checkedItems = root.getCheckedItems().iterator();
+		Iterator<ExecutionContextItem> checkedItems = ((RTSystemItem)selectedItem_).getExecutionContexts().iterator();
 		int index = 0;
 		isOffsetUpdated = false;
 		offset = 0;
 		while ( checkedItems.hasNext() ) {
 			TreeModelItem item = checkedItems.next();
-			if ( item instanceof ExecutionContextItem ) {
-				boolean isSelected = (item == selectedItem_) || (item.getChildren().contains(selectedItem_));
-				updateChart((ExecutionContextItem)item, index++, isSelected);
-			}
+			updateChart((ExecutionContextItem)item, index++, false);
 		}
 		updateChart(null, index, false);
 	}

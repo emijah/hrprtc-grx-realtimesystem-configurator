@@ -20,6 +20,15 @@ public class TreeModelItem implements IPropertySource {
 	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
 	protected String iconpath = null;
 	
+	public TreeModelItem()
+	{
+	}
+	
+	public TreeModelItem(String name)
+	{
+		setName(name);
+	}
+	
 	public String getName() {
 		return nodeName;
 	}
@@ -129,5 +138,17 @@ public class TreeModelItem implements IPropertySource {
 	
 	public Map<Object, Object> getPropertyMap() {
 		return properties;
+	}
+	
+	public TreeModelItem find(String name)
+	{
+		Iterator<TreeModelItem> it = children.iterator();
+		while ( it.hasNext() ) {
+			TreeModelItem item = it.next();
+			if ( item.getName().equals(name) ) {
+				return item;
+			}
+		}
+		return null;
 	}
 }

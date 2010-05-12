@@ -34,10 +34,16 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.CheckStateChangedEvent;
 import org.eclipse.jface.viewers.CheckboxTreeViewer;
+import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.ICheckStateListener;
+import org.eclipse.jface.viewers.IDoubleClickListener;
+import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.ITableLabelProvider;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.StructuredSelection;
+import org.eclipse.jface.viewers.TreeSelection;
+import org.eclipse.jface.viewers.TreeViewer;
 import org.eclipse.jface.viewers.Viewer;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
@@ -51,6 +57,7 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.swt.widgets.TreeColumn;
+import org.eclipse.ui.dialogs.ContainerCheckedTreeViewer;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.ho.yaml.Yaml;
@@ -65,7 +72,7 @@ public class BenchmarkResultExplorer extends ViewPart
 {
 	private IProject project;
 	private TreeModelItem rootItem = new TreeModelItem();
-	private CheckboxTreeViewer resultViewer;
+	private TreeViewer resultViewer;
 	private NullProgressMonitor progress;
 	private FileDialog fdlg;
 	private List<Action> actionList = new ArrayList<Action>();
@@ -125,18 +132,13 @@ public class BenchmarkResultExplorer extends ViewPart
 		}
 
 		// TODO show dialog to confirm create project
-		project = getProject();
+		project = getProject(REALTIME_SYSTEM_PROJECT_NAME);
 		updateList();
 	}
 
 	@Override
 	public void setFocus()
 	{
-	}
-	
-	public IProject getProject()
-	{
-		return getProject(REALTIME_SYSTEM_PROJECT_NAME);
 	}
 	
 	private IProject getProject(String projectName)
@@ -169,41 +171,62 @@ public class BenchmarkResultExplorer extends ViewPart
 						return ( name.endsWith(".xml") );
 					}
 				});
+				
 				if ( systemprofiles.length > 0 ) {
-					RTSystemItem rts = new RTSystemItem(systemprofiles[0].getAbsolutePath());
-					rootItem.add(rts);
-					
-					// load result
+					RTSystemItem system = new RTSystemItem(systemprofiles[0].getAbsolutePath());
+					TreeModelItem systemRoot = new TreeModelItem(system.getId());
+					systemRoot.add(system);
+					TreeModelItem resultRoot = new TreeModelItem("ResultRoot");
+					systemRoot.add(resultRoot);
+					rootItem.add(systemRoot);
+					IFolder folder = project.getFolder(system.getId()+"/results");
 					try {
-						IFolder folder = project.getFolder(rts.getId());
-						if ( folder.findMember(LOG_FILE_NAME, false) != null ) {
-							IFile file = folder.getFile(LOG_FILE_NAME);
-							Map<String, BenchmarkResultItem> ret = fromYaml(file);
-							if ( ret != null ) {
-								Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
-								while(rtcs.hasNext()) {
-									RTComponentItem rtc = rtcs.next();
-									rtc.setResult(ret.get(rtc.getId()));
-									double cycle = 1.0/rtc.getComponent().getExecutionContexts().get(0).getRate();
-									rtc.getResult().setCycle(cycle);
-								}
+						IResource[] members = folder.members();
+						for (int j=0; j<members.length; j++ ) {
+							if ( members[j].getType() == IResource.FILE && members[j].getName().endsWith(".yaml")) {
+								TreeModelItem item = new TreeModelItem(members[j].getName());
+								resultRoot.add(item);
 							}
 						}
-					} catch (Exception e) {
-						System.out.println("Exception occured during loading log file.");
+					} catch (CoreException e) {
+						e.printStackTrace();
 					}
-					// calculate summation
-					Iterator<RTComponentItem> it = rts.getRTCMembers().iterator();
-					while ( it.hasNext() ) {
-						RTComponentItem model = it.next();
-						if ( model instanceof ExecutionContextItem ) {
-							((ExecutionContextItem)model).calcSummation();
-						}
-					}
+					
 				}
 			}
 		}
 		resultViewer.refresh();
+	}
+	
+	private void loadResult(String filename, RTSystemItem rts)
+	{
+		// load result
+		try {
+			IFolder folder = project.getFolder(rts.getId());
+			if ( folder.findMember(filename, false) != null ) {
+				IFile file = folder.getFile(filename);
+				Map<String, BenchmarkResultItem> ret = fromYaml(file);
+				if ( ret != null ) {
+					Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
+					while(rtcs.hasNext()) {
+						RTComponentItem rtc = rtcs.next();
+						rtc.setResult(ret.get(rtc.getId()));
+						double cycle = 1.0/rtc.getComponent().getExecutionContexts().get(0).getRate();
+						rtc.getResult().setCycle(cycle);
+					}
+				}
+			}
+		} catch (Exception e) {
+			System.out.println("Exception occured during loading log file.");
+		}
+		// calculate summation
+		Iterator<RTComponentItem> it = rts.getRTCMembers().iterator();
+		while ( it.hasNext() ) {
+			RTComponentItem model = it.next();
+			if ( model instanceof ExecutionContextItem ) {
+				((ExecutionContextItem)model).calcSummation();
+			}
+		}
 	}
 	
 	private class ImportAction extends Action
@@ -252,7 +275,11 @@ public class BenchmarkResultExplorer extends ViewPart
 		
 		public Object[] getChildren(Object parentElement)
 		{
-		    return ((TreeModelItem)parentElement).getChildren().toArray();
+			TreeModelItem item = (TreeModelItem)parentElement;
+			if ( item.getParent() == rootItem ) {
+				return item.find("ResultRoot").getChildren().toArray();
+			}
+		    return item.getChildren().toArray();
 		}
 		
 		public Object getParent(Object element)
@@ -262,41 +289,18 @@ public class BenchmarkResultExplorer extends ViewPart
 		
 		public boolean hasChildren(Object element)
 		{
-			return (getChildren(element).length > 0);
+			Object[] list = getChildren(element);
+			return ( list != null && list.length > 0);
 		}
 	}
 	
-	private class ViewLabelProvider extends LabelProvider implements ITableLabelProvider
+	private class ViewLabelProvider extends LabelProvider 
 	{
 	    private HashMap<ImageDescriptor, Image> imageMap;
 
-		public String getColumnText(Object obj, int index)
+		public String getText(Object obj)
 		{
-			try {				
-				TreeModelItem item = (TreeModelItem)obj;
-				switch(index) {
-				case 0:
-					return item.getName();
-				case 1:
-					if ( item instanceof RTSystemItem ) {
-						return ((RTSystemItem)item).getVersion();
-					}
-					return "-";
-				case 2:
-					if ( item instanceof RTComponentItem ) {
-						BenchmarkResultItem result = ((RTComponentItem)item).getResult();
-						if ( result.date != null ) {
-							return FORMAT_DATE1.format(result.date);
-						}
-					}
-					return "-";
-				default:
-					break;
-				}
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-			return "";
+			return ((TreeModelItem)obj).getName();
 		}
 		
 		public Image getColumnImage(Object obj, int index)
@@ -310,8 +314,11 @@ public class BenchmarkResultExplorer extends ViewPart
 	    public Image getImage(Object element)
 	    {
 	        if ( element instanceof TreeModelItem ) {
-	            ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), ((TreeModelItem)element).getIconPath());
-	            return cacheImage(desc);
+	            String path = ((TreeModelItem)element).getIconPath();
+	            if ( path != null ) {
+	            	ImageDescriptor desc = AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), path);
+	            	return cacheImage(desc);
+	            }
 	        }
 	        return null;
 	    }
@@ -342,60 +349,74 @@ public class BenchmarkResultExplorer extends ViewPart
 	    }
 	}
 	
-	private CheckboxTreeViewer setupTreeViewer(Composite parent)
+	private TreeViewer setupTreeViewer(Composite parent)
 	{
-		CheckboxTreeViewer viewer = new CheckboxTreeViewer(parent, SWT.NONE);
+		TreeViewer viewer = new TreeViewer(parent, SWT.SINGLE);
+		//ContainerCheckedTreeViewer viewer = new ContainerCheckedTreeViewer(parent, SWT.NONE);
 		viewer.setContentProvider(new ViewContentProvider());
 		viewer.setLabelProvider(new ViewLabelProvider());
 		viewer.setInput(rootItem);
-		viewer.addCheckStateListener(new ICheckStateListener()
+        viewer.addDoubleClickListener(new IDoubleClickListener()
+        {
+            @Override
+            public void doubleClick(DoubleClickEvent event)
+            {
+                TreeModelItem item = (TreeModelItem)((TreeSelection)event.getSelection()).getFirstElement();
+                if ( item.getParent() == rootItem ) {
+                	
+                } else if ( item.getParent().getName().equals("ResultRoot") ) {
+                	Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
+                	while ( it.hasNext() ) {
+                		TreeModelItem i = it.next();
+                		if ( i instanceof RTSystemItem ) {
+                			loadResult(item.getName(), (RTSystemItem)i);
+                			resultViewer.setSelection(new StructuredSelection(item));
+                			break;
+                		}
+                	}
+                }
+            }
+        });
+
+		/*viewer.addCheckStateListener(new ICheckStateListener()
 		{
 			public void checkStateChanged(CheckStateChangedEvent event)
 			{
 				boolean isSelected = event.getChecked();
-				TreeModelItem item = (TreeModelItem)event.getElement();
-				resultViewer.setSubtreeChecked(item, isSelected);
-				List<Object> checkedObjects = Arrays.asList(resultViewer.getCheckedElements());
-				while ( item.hasParent() ) {
-					item = item.getParent();
-					if ( isSelected ) {
-						resultViewer.setChecked(item, true);
-					} else {
-						Iterator<TreeModelItem> children =  item.getChildren().iterator();
-						while ( children.hasNext() ) {
-							if ( checkedObjects.contains(children.next()) ) {
-								isSelected = true;
-								break;
+				Object selected = event.getElement();
+				if ( selected instanceof TreeModelItem ) {
+					TreeModelItem item = (TreeModelItem)selected;
+					//resultViewer.setSubtreeChecked(item, isSelected);
+					List<Object> checkedObjects = Arrays.asList(resultViewer.getCheckedElements());
+					while ( item.hasParent() ) {
+						item = item.getParent();
+						if ( isSelected ) {
+							resultViewer.setChecked(item, true);
+						} else {
+							Iterator<TreeModelItem> children =  item.getChildren().iterator();
+							while ( children.hasNext() ) {
+								if ( checkedObjects.contains(children.next()) ) {
+									isSelected = true;
+									break;
+								}
 							}
+							resultViewer.setChecked(item, isSelected);
+							break;
 						}
-						resultViewer.setChecked(item, isSelected);
-						break;
 					}
+					checkedObjects = Arrays.asList(resultViewer.getCheckedElements());
+					item.getRoot().setCheckedItems(checkedObjects.toArray(new TreeModelItem[0]));
 				}
-				checkedObjects = Arrays.asList(resultViewer.getCheckedElements());
-				item.getRoot().setCheckedItems(checkedObjects.toArray(new TreeModelItem[0]));
 			}
-		});
+		});*/
 		
 		Tree tree = viewer.getTree();
 		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
-		tree.setHeaderVisible(true);
 		tree.setLinesVisible(true);
-		int idx = 0;
-		setHeader(tree, SWT.LEFT, idx++, 250, "RTSystem Name");
-		setHeader(tree, SWT.LEFT, idx++,  50, "Ver.");
-		setHeader(tree, SWT.LEFT, idx++, 200, "Date");
 		
 		return viewer;
 	}
 	
-	private void setHeader(Tree tree, int alignment, int index, int width, String text)
-	{
-		TreeColumn column = new TreeColumn(tree, alignment, index);
-		column.setText(text);
-		column.setWidth(width);
-	}
-
 	private void importProfile(String fname) 
 	{
 		if ( fname != null && fname != "" ) {
