@@ -17,7 +17,7 @@ public class TreeModelItem implements IPropertySource {
 	private TreeModelItem parent;
 	private List<TreeModelItem> children = new ArrayList<TreeModelItem>();
 	private List<TreeModelItem> checkedItems = new ArrayList<TreeModelItem>();
-	private Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
+	public Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
 	protected String iconpath = null;
 	
 	public TreeModelItem()
