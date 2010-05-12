@@ -241,6 +241,7 @@ private Action actTest;
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actTest);
+		getSite().setSelectionProvider(rtsViewer);
 	}
 
 	@Override
@@ -611,7 +612,10 @@ private Action actTest;
 			}
 			GrxRTMUtil.releaseObject(rnc);
 			rtsViewer.refresh();
-			TimingChartView.getInstance().updateCharts();
+			TimingChartView tview = TimingChartView.getInstance();
+			if ( tview != null ) {
+				tview.updateCharts();
+			}
 			checkState();
 		}
 		return ret;
@@ -712,6 +716,7 @@ private Action actTest;
 			}
 			file.setContents(new ByteArrayInputStream(currentSystem.toYaml().getBytes("UTF-8")), true, false, null);
 			BenchmarkResultExplorer.getInstance().updateList();
+			checkState();
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		} catch (CoreException e) {
