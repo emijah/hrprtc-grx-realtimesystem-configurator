@@ -65,8 +65,6 @@ public class TimingChartView extends ViewPart
 	private static final double DEFAULT_RANGE_MAX = 4.0;
 	private static final double DEFAULT_RANGE_MIN = 0.5;
 	
-	private Text txtPlatFromInfo;
-	
 	public TimingChartView()
 	{
 		this_ = this;
@@ -85,7 +83,7 @@ public class TimingChartView extends ViewPart
 			public void selectionChanged(IWorkbenchPart part, ISelection selection)
 			{
 				if (part != TimingChartView.this &&	 selection instanceof IStructuredSelection) {
-					List sel = ((IStructuredSelection) selection).toList();
+					List<?> sel = ((IStructuredSelection) selection).toList();
 	        		if ( sel.size() > 0 ) {
 	        			TreeModelItem item = (TreeModelItem) sel.get(0);
 	        			List<TreeModelItem> children = item.getChildren();
@@ -333,8 +331,8 @@ public class TimingChartView extends ViewPart
 		
 		// add cycle
 		double tmax = dataset.getDomainUpperBound(false);
-		List<XYSeries> list = dataset.getSeries();
-		XYSeries cycleSeries = list.get(0);
+		List<?> list = dataset.getSeries();
+		XYSeries cycleSeries = (XYSeries)list.get(0);
 		if ( cycle > 0 ) {
 			for (double v=0; v<tmax+cycle ; v += cycle) {
 				cycleSeries.add(v-TRANSITION, 0);
@@ -349,7 +347,7 @@ public class TimingChartView extends ViewPart
 			downStateValue = DEFAULT_DOWNSTATE + item.getChildren().size() - 1;
 			upStateValue   = downStateValue + DEFAULT_UPSTATE;
 			for (int i=1; i<list.size(); i++) {
-				list.get(i).add((int)(tmax/cycle)*cycle+cycle, downStateValue);
+				((XYSeries)list.get(i)).add((int)(tmax/cycle)*cycle+cycle, downStateValue);
 				downStateValue -= 1;
 				upStateValue -= 1;
 			}
