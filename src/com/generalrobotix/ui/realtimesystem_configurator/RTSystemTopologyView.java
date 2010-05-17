@@ -50,7 +50,7 @@ public class RTSystemTopologyView extends ViewPart {
 		getSite().getPage().addSelectionListener(new ISelectionListener() {
 			public void selectionChanged(IWorkbenchPart sourcepart, ISelection selection) {
 				if (sourcepart != RTSystemTopologyView.this	 && selection instanceof IStructuredSelection) {
-					List ret = ((IStructuredSelection) selection).toList();
+					List<?> ret = ((IStructuredSelection) selection).toList();
 					if (ret.size() > 0 ) {
 						if ( ret.get(0) instanceof RTComponentItem ) {
 							updateGraphStructure(((RTComponentItem)ret.get(0)).getRTSystem());
@@ -64,7 +64,7 @@ public class RTSystemTopologyView extends ViewPart {
 		parent.setLayout(new GridLayout());
 		
 		graph = new DirectedOrderedSparseMultigraph<RTComponentItem, RTCConnection>();
-		FRLayout layout = new FRLayout<RTComponentItem, RTCConnection>(graph);
+		FRLayout<RTComponentItem, RTCConnection> layout = new FRLayout<RTComponentItem, RTCConnection>(graph);
 		layout.setSize(new Dimension(300, 300));
 		GraphZoomScrollPane<RTComponentItem, RTCConnection> graphPanel = new GraphZoomScrollPane<RTComponentItem, RTCConnection>(parent, SWT.NONE, layout, new Dimension(300, 300));
 		graphPanel.setLayoutData(new GridData(GridData.FILL_BOTH|GridData.HORIZONTAL_ALIGN_FILL| GridData.VERTICAL_ALIGN_FILL));

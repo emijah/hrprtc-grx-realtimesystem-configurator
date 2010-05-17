@@ -180,19 +180,4 @@ public class BenchmarkResultItem extends TreeModelItem
 		mean += result.mean;
 		updateProperties();
 	}
-	
-	public Object getPropertyValue(Object id)
-	{
-		return properties.get(id);
-	}
-
-	public void setPropertyValue(Object id, Object value)
-	{
-		properties.put(id, value);		
-	}
-	
-	public Map<Object, Object> getPropertyMap()
-	{
-		return properties;
-	}
 }

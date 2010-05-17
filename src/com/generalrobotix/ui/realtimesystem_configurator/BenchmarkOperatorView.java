@@ -1,9 +1,6 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -76,7 +73,6 @@ private Action actTest;
 	private Combo cmbInterval_;
 	private Combo cmbRobotHost_;
 	
-    private static Color white_;
     private static Color black_;
     private static Color red_;
     private static Color yellow_;
@@ -94,7 +90,6 @@ private Action actTest;
     
 	public BenchmarkOperatorView()
 	{
-		white_ = Display.getDefault().getSystemColor(SWT.COLOR_WHITE);
 		black_ = Display.getDefault().getSystemColor(SWT.COLOR_BLACK);
 		red_ = Display.getDefault().getSystemColor(SWT.COLOR_RED);
 		yellow_ = Display.getDefault().getSystemColor(SWT.COLOR_DARK_MAGENTA);//.COLOR_YELLOW);
@@ -203,7 +198,7 @@ private Action actTest;
 	        public void selectionChanged(IWorkbenchPart sourcepart, ISelection selection) 
 	        {
 	        	if (sourcepart != BenchmarkOperatorView.this && selection instanceof IStructuredSelection) {
-	        		List sel = ((IStructuredSelection) selection).toList();
+	        		List<?> sel = ((IStructuredSelection) selection).toList();
 	        		if ( sel.size() > 0 ) {
 	        			TreeModelItem item = (TreeModelItem) sel.get(0);
 	        			List<TreeModelItem> children = item.getChildren();
@@ -521,16 +516,6 @@ private Action actTest;
 		}
 	}
 	
-	private void resetLastLogs() 
-	{
-		if ( currentSystem != null ) {
-			Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
-			while ( it.hasNext() ) {
-				it.next().getResult().resetLastLog();
-			}
-		}
-	}
-
 	private void checkState()
 	{
 		if ( currentSystem != null ) {
@@ -684,6 +669,27 @@ private Action actTest;
 		return false;
 	}
 	
+	private void save()
+	{
+		IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder(currentSystem.getId()+"/results");
+		IFile   file = folder.getFile(FORMAT_DATE2.format(new Date())+".yaml");
+		try {
+			if ( !file.exists() ) {
+				file.create(null, false, null);
+			}
+			file.setContents(new ByteArrayInputStream(currentSystem.toYaml().getBytes("UTF-8")), true, false, null);
+			BenchmarkResultExplorer.getInstance().updateList();
+			checkState();
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} catch (CoreException e) {
+			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+	/*
 	private void execPython(String pythonPath, String moduleName, List<String> args)
 	{
 		try {
@@ -705,24 +711,5 @@ private Action actTest;
 			e1.printStackTrace();
 		}
 	}
-	
-	private void save()
-	{
-		IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder(currentSystem.getId()+"/results");
-		IFile   file = folder.getFile(FORMAT_DATE2.format(new Date())+".yaml");
-		try {
-			if ( !file.exists() ) {
-				file.create(null, false, null);
-			}
-			file.setContents(new ByteArrayInputStream(currentSystem.toYaml().getBytes("UTF-8")), true, false, null);
-			BenchmarkResultExplorer.getInstance().updateList();
-			checkState();
-		} catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (CoreException e) {
-			e.printStackTrace();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}
+	*/
 }

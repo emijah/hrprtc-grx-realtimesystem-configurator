@@ -32,8 +32,10 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -42,6 +44,8 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.dnd.TransferData;
+import org.eclipse.swt.events.MouseEvent;
+import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -63,10 +67,12 @@ public class BenchmarkResultExplorer extends ViewPart
 {
 	private IProject project;
 	private TreeModelItem rootItem = new TreeModelItem();
+	private TreeModelItem rightClickTarget_ = null;
 	private TreeViewer resultViewer;
 	private NullProgressMonitor progress;
 	private FileDialog fdlg;
 	private List<Action> actionList = new ArrayList<Action>();
+	private LoadAction actLoad_;
 	private static BenchmarkResultExplorer this_;
 
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
@@ -95,16 +101,18 @@ public class BenchmarkResultExplorer extends ViewPart
 		resultViewer.addDropSupport(DND.DROP_COPY | DND.DROP_MOVE, transfers, new MyViewerDropListener(resultViewer));
 		
 		actionList.add(new ImportAction());
+		actLoad_ = new LoadAction();
 
 		MenuManager menuManager = new MenuManager("#PopupMenu");
 		menuManager.setRemoveAllWhenShown(true);
 		menuManager.addMenuListener(new IMenuListener() {
 			public void menuAboutToShow(IMenuManager manager) 
 			{
-				Iterator<Action> it = actionList.iterator();
-				while (it.hasNext()) {
-					manager.add(it.next());
-				}
+				manager.add(actLoad_);
+				//Iterator<Action> it = actionList.iterator();
+				//while (it.hasNext()) {
+					//manager.add(it.next());
+				//}
 			}
 		});
 		Menu menu = menuManager.createContextMenu(resultViewer.getControl());
@@ -194,16 +202,30 @@ public class BenchmarkResultExplorer extends ViewPart
 		resultViewer.expandAll();
 	}
 	
-	private void loadResult(String filename, RTSystemItem rts)
+	private boolean loadResult(TreeModelItem item)
 	{
+		RTSystemItem system = null;
+        Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
+        while ( it.hasNext() ) {
+        	TreeModelItem i = it.next();
+      		if ( i instanceof RTSystemItem ) {
+      			system = (RTSystemItem)i;
+      			break;
+      		}
+      	}
+      	if ( system == null) {
+      		return false;
+        }
+               
+      	String filename = item.getName();
 		// load result
 		try {
-			IFolder folder = project.getFolder(rts.getId()+"/results");
+			IFolder folder = project.getFolder(system.getId()+"/results");
 			if ( folder.findMember(filename, false) != null ) {
 				IFile file = folder.getFile(filename);
 				Map<String, BenchmarkResultItem> ret = fromYaml(file);
 				if ( ret != null ) {
-					Iterator<RTComponentItem> rtcs = rts.getRTCMembers().iterator();
+					Iterator<RTComponentItem> rtcs = system.getRTCMembers().iterator();
 					while(rtcs.hasNext()) {
 						RTComponentItem rtc = rtcs.next();
 						rtc.setResult(ret.get(rtc.getId()));
@@ -214,15 +236,17 @@ public class BenchmarkResultExplorer extends ViewPart
 			}
 		} catch (Exception e) {
 			System.out.println("Exception occured during loading log file.");
+			return false;
 		}
 		// calculate summation
-		Iterator<RTComponentItem> it = rts.getRTCMembers().iterator();
-		while ( it.hasNext() ) {
-			RTComponentItem model = it.next();
+		Iterator<RTComponentItem> rtcs = system.getRTCMembers().iterator();
+		while ( rtcs.hasNext() ) {
+			RTComponentItem model = rtcs.next();
 			if ( model instanceof ExecutionContextItem ) {
 				((ExecutionContextItem)model).calcSummation();
 			}
 		}
+		return true;
 	}
 	
 	private class ImportAction extends Action
@@ -241,6 +265,23 @@ public class BenchmarkResultExplorer extends ViewPart
 			if ( fname != null ) {
 				importProfile(fname);
 			}
+		}
+	};
+	
+	private class LoadAction extends Action
+	{
+		public LoadAction()
+		{
+			setText("Load result");
+			setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/folder_open.png"));
+		}
+		
+		public void run()
+		{
+			resultViewer.getSelection();
+            TreeModelItem item = (TreeModelItem)((TreeSelection)resultViewer.getSelection()).getFirstElement();
+           // ((TreeSelection)event.getSelection()).getFirstElement();
+  			loadResult(item);
 		}
 	};
 	
@@ -347,15 +388,9 @@ public class BenchmarkResultExplorer extends ViewPart
                 if ( item.getParent() == rootItem ) {
                 	
                 } else if ( item.getParent().getName().equals("ResultRoot") ) {
-                	Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
-                	while ( it.hasNext() ) {
-                		TreeModelItem i = it.next();
-                		if ( i instanceof RTSystemItem ) {
-                			loadResult(item.getName(), (RTSystemItem)i);
-                			resultViewer.setSelection(new StructuredSelection(item));
-                			break;
-                		}
-                	}
+               		if ( loadResult(item) ) {
+          				resultViewer.setSelection(new StructuredSelection(item));
+               		}
                 }
             }
         });

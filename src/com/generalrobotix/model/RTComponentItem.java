@@ -146,7 +146,7 @@ public class RTComponentItem extends TreeModelItem
 	
 	public IPropertyDescriptor[] getPropertyDescriptors()
 	{
-		Iterator it = getResult().properties.keySet().iterator();
+		Iterator<Object> it = getResult().properties.keySet().iterator();
 		while (it.hasNext()) {
 			Object key = it.next();
 			if ( properties.containsKey(key) ) {
