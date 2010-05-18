@@ -66,7 +66,6 @@ import com.generalrobotix.ui.util.GrxRTMUtil;
 
 public class BenchmarkOperatorView extends ViewPart {
 	private RTSystemItem currentSystem;
-private Action actTest;	
 	private TreeViewer rtsViewer;
 	private Button btnUpdate;
 	private Button btnSave;
@@ -113,11 +112,6 @@ private Action actTest;
 			public void widgetSelected(SelectionEvent e)
 			{
 				setupRTSystem();
-				/*String pythonPath = "/home/kawasumi/project/hrpsysRTM/src/hrpsys3/grx/REFHW/scripts";
-				String moduleName = "test";
-				ArrayList<String> args = new ArrayList<String>();
-				args.add(cmbRobotHost_.getText());
-				execPython(pythonPath, moduleName, args);*/
 				checkState();
 				rtsViewer.refresh();
 			}	
@@ -143,7 +137,6 @@ private Action actTest;
 			public void widgetSelected(SelectionEvent e)
 			{
 				if ( ((Button)e.getSource()).getSelection() ) {
-					//resetLastLogs();
 					resetLogAction();
 					Display display = Display.getCurrent();
 					if ( !display.isDisposed() ) {
@@ -200,42 +193,31 @@ private Action actTest;
 	        	if (sourcepart != BenchmarkOperatorView.this && selection instanceof IStructuredSelection) {
 	        		List<?> sel = ((IStructuredSelection) selection).toList();
 	        		if ( sel.size() > 0 ) {
+	        			currentSystem = null;
 	        			TreeModelItem item = (TreeModelItem) sel.get(0);
 	        			List<TreeModelItem> children = item.getChildren();
 	        			if ( children.size() > 0 && children.get(0) instanceof RTSystemItem ) {
 	        				currentSystem = (RTSystemItem)children.get(0);
-	        				rtsViewer.setInput(currentSystem);
-	        				text.setText(currentSystem.getId());
-	        				rtsViewer.expandAll();
 	        			} else {
 	        				Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
 	        				while( it.hasNext() ) {
 	        					TreeModelItem m = it.next();
 	        					if ( m instanceof RTSystemItem ) {
 	        						currentSystem = (RTSystemItem)m;
-	        						rtsViewer.setInput(currentSystem);
-	        						text.setText(currentSystem.getId());
-	        						rtsViewer.expandAll();
 	        						break;
 	        					}
 	        				}
+	        			}
+	        			if ( currentSystem != null ) {
+	        				rtsViewer.setInput(currentSystem);
+	        				text.setText(currentSystem.getId());
+	        				rtsViewer.expandAll();
 	        			}
 	        		}
 	            }
 	        }
 	    });
 		
-		actTest = new Action("test", Action.AS_PUSH_BUTTON)
-		{
-			public void run() 
-			{
-				//isTest = !isTest;
-				//System.out.println(isTest);
-				checkState();
-				rtsViewer.refresh();
-			}
-		};
-		getViewSite().getActionBars().getToolBarManager().add(actTest);
 		getSite().setSelectionProvider(rtsViewer);
 	}
 

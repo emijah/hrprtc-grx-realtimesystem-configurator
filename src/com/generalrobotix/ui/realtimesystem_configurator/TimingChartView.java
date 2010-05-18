@@ -84,7 +84,7 @@ public class TimingChartView extends ViewPart
 			{
 				if (part != TimingChartView.this &&	 selection instanceof IStructuredSelection) {
 					List<?> sel = ((IStructuredSelection) selection).toList();
-	        		if ( sel.size() > 0 ) {
+	        		if ( sel.size() > 0 && sel.get(0) instanceof TreeModelItem ) {
 	        			TreeModelItem item = (TreeModelItem) sel.get(0);
 	        			List<TreeModelItem> children = item.getChildren();
 	        			if ( children.size() > 0 && children.get(0) instanceof RTSystemItem ) {
@@ -333,6 +333,9 @@ public class TimingChartView extends ViewPart
 		double tmax = dataset.getDomainUpperBound(false);
 		List<?> list = dataset.getSeries();
 		XYSeries cycleSeries = (XYSeries)list.get(0);
+		if (cycleSeries.getItemCount() > 1000) {
+			System.out.println("warning...");
+		}
 		if ( cycle > 0 ) {
 			for (double v=0; v<tmax+cycle ; v += cycle) {
 				cycleSeries.add(v-TRANSITION, 0);

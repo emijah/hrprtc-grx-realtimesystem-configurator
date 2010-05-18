@@ -32,10 +32,8 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
-import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -44,8 +42,6 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.Transfer;
 import org.eclipse.swt.dnd.TransferData;
-import org.eclipse.swt.events.MouseEvent;
-import org.eclipse.swt.events.MouseListener;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
@@ -53,6 +49,8 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
+import org.eclipse.ui.PartInitException;
+import org.eclipse.ui.part.FileEditorInput;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.ho.yaml.Yaml;
@@ -67,12 +65,13 @@ public class BenchmarkResultExplorer extends ViewPart
 {
 	private IProject project;
 	private TreeModelItem rootItem = new TreeModelItem();
-	private TreeModelItem rightClickTarget_ = null;
 	private TreeViewer resultViewer;
 	private NullProgressMonitor progress;
 	private FileDialog fdlg;
 	private List<Action> actionList = new ArrayList<Action>();
 	private LoadAction actLoad_;
+	private OpenAction actOpen_;
+	private DeleteAction actDelete_;
 	private static BenchmarkResultExplorer this_;
 
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
@@ -102,6 +101,8 @@ public class BenchmarkResultExplorer extends ViewPart
 		
 		actionList.add(new ImportAction());
 		actLoad_ = new LoadAction();
+		actOpen_ = new OpenAction();
+		actDelete_ = new DeleteAction();
 
 		MenuManager menuManager = new MenuManager("#PopupMenu");
 		menuManager.setRemoveAllWhenShown(true);
@@ -109,6 +110,8 @@ public class BenchmarkResultExplorer extends ViewPart
 			public void menuAboutToShow(IMenuManager manager) 
 			{
 				manager.add(actLoad_);
+				manager.add(actOpen_);
+				manager.add(actDelete_);
 				//Iterator<Action> it = actionList.iterator();
 				//while (it.hasNext()) {
 					//manager.add(it.next());
@@ -186,8 +189,9 @@ public class BenchmarkResultExplorer extends ViewPart
 					try {
 						IResource[] members = folder.members();
 						for (int j=0; j<members.length; j++ ) {
-							if ( members[j].getType() == IResource.FILE && members[j].getName().endsWith(".yaml")) {
+							if ( members[j].getType() == IResource.FILE && members[j].getName().endsWith(".yaml") ) {
 								TreeModelItem item = new TreeModelItem(members[j].getName());
+								item.setPropertyValue("resource", members[j]);
 								resultRoot.add(item);
 							}
 						}
@@ -280,8 +284,49 @@ public class BenchmarkResultExplorer extends ViewPart
 		{
 			resultViewer.getSelection();
             TreeModelItem item = (TreeModelItem)((TreeSelection)resultViewer.getSelection()).getFirstElement();
-           // ((TreeSelection)event.getSelection()).getFirstElement();
   			loadResult(item);
+		}
+	};
+	
+	private class OpenAction extends Action
+	{
+		public OpenAction()
+		{
+			setText("Open with SystemEditor");
+		}
+		public void run()
+		{
+            TreeModelItem item = (TreeModelItem)((TreeSelection)resultViewer.getSelection()).getFirstElement();
+            IFile f = getProject().getFile("/tmp/test2.xml");
+            try {
+				getSite().getPage().openEditor(new FileEditorInput(f), "jp.go.aist.rtm.systemeditor.ui.editor.SystemDiagramEditor");
+			} catch (PartInitException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	};
+	
+	private class DeleteAction extends Action
+	{
+		public DeleteAction()
+		{
+			setText("Delete");
+			setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/delete.gif"));
+		}
+		public void run() 
+		{
+            TreeModelItem item = (TreeModelItem)((TreeSelection)resultViewer.getSelection()).getFirstElement();
+            Object obj = item.getPropertyValue("resource");
+            if ( obj instanceof IResource ) {
+            	item.getParent().removeChild(item);
+            	try {
+					((IResource)obj).delete(true, null);
+				} catch (CoreException e) {
+					e.printStackTrace();
+				}
+            }
+            resultViewer.refresh();
 		}
 	};
 	
