@@ -110,8 +110,8 @@ public class BenchmarkResultExplorer extends ViewPart
 			public void menuAboutToShow(IMenuManager manager) 
 			{
 				manager.add(actLoad_);
-				manager.add(actOpen_);
 				manager.add(actDelete_);
+				manager.add(actOpen_);
 				//Iterator<Action> it = actionList.iterator();
 				//while (it.hasNext()) {
 					//manager.add(it.next());
@@ -208,6 +208,10 @@ public class BenchmarkResultExplorer extends ViewPart
 	
 	private boolean loadResult(TreeModelItem item)
 	{
+		if ( !item.getParent().getName().equals("ResultRoot") ) {
+			return false;
+		}
+		
 		RTSystemItem system = null;
         Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
         while ( it.hasNext() ) {
@@ -284,7 +288,9 @@ public class BenchmarkResultExplorer extends ViewPart
 		{
 			resultViewer.getSelection();
             TreeModelItem item = (TreeModelItem)((TreeSelection)resultViewer.getSelection()).getFirstElement();
-  			loadResult(item);
+           	if ( loadResult(item) ) {
+          		resultViewer.setSelection(new StructuredSelection(item));
+           	}
 		}
 	};
 	
@@ -432,10 +438,8 @@ public class BenchmarkResultExplorer extends ViewPart
                 TreeModelItem item = (TreeModelItem)((TreeSelection)event.getSelection()).getFirstElement();
                 if ( item.getParent() == rootItem ) {
                 	
-                } else if ( item.getParent().getName().equals("ResultRoot") ) {
-               		if ( loadResult(item) ) {
-          				resultViewer.setSelection(new StructuredSelection(item));
-               		}
+                } else if ( loadResult(item) ) {
+          			resultViewer.setSelection(new StructuredSelection(item));
                 }
             }
         });
