@@ -2,7 +2,7 @@ Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: RealtimesystemConfigurator Plug-in
 Bundle-SymbolicName: com.generalrobotix.ui.realtimesystem_configurator;singleton:=true
-Bundle-Version: 1.0.0
+Bundle-Version: 0.5.0
 Bundle-ClassPath: src/com/generalrobotix/ui/realtimesystem_configurator/,
  libs/commons-logging.jar,
  libs/jaxb-impl.jar,
@@ -29,10 +29,17 @@ Bundle-ClassPath: src/com/generalrobotix/ui/realtimesystem_configurator/,
 Bundle-Activator: com.generalrobotix.ui.realtimesystem_configurator.Activator
 Bundle-Vendor: General Roboix, Inc.
 Bundle-Localization: plugin
-Require-Bundle: org.eclipse.ui,
- org.eclipse.core.runtime,
- org.eclipse.core.resources,
- org.eclipse.jdt.ui,
- jp.go.aist.rtm.systemeditor,
- jp.go.aist.rtm.toolscommon,
- jp.go.aist.rtm.toolscommon.profiles
+Import-Package: org.eclipse.core.runtime.model,
+ org.eclipse.jface.action,
+ org.eclipse.jface.viewers,
+ org.eclipse.swt,
+ org.eclipse.swt.layout,
+ org.eclipse.swt.widgets,
+ org.eclipse.ui,
+ org.eclipse.ui.part,
+ org.eclipse.ui.plugin,
+ org.osgi.framework
+Require-Bundle: jp.go.aist.rtm.nameserviceview;bundle-version="1.0.0",
+ jp.go.aist.rtm.repositoryView;bundle-version="1.0.0",
+ jp.go.aist.rtm.toolscommon;bundle-version="1.0.0",
+ jp.go.aist.rtm.toolscommon.profiles;bundle-version="1.0.0"

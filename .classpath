@@ -2,26 +2,26 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry exported="true" kind="lib" path="libs/commons-logging.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jaxb-impl.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/log4j-1.2.15.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/OpenRTM-aist-1.0.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jcommon-1.0.16.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jfreechart-1.0.13.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jfreechart-1.0.13-swt.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/BenchmarkService.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/collections-generic-4.01.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/colt-1.2.0.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/concurrent-1.3.4.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jung-algorithms-2.0-alpha3.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jung-api-2.0-alpha3.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jung-api-2.0-alpha3-tests.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jung-graph-impl-2.0-alpha3.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jung-io-2.0-alpha3.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jung-swt-rendering-2.0-alpha3.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jung-swt-samples-2.0-alpha3.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jung-swt-visualization-2.0-alpha3.jar"/>
+	<classpathentry exported="true" kind="lib" path="libs/jyaml-1.3.jar"/>
 	<classpathentry kind="con" path="org.eclipse.pde.core.requiredPlugins"/>
-	<classpathentry kind="lib" path="libs/commons-logging.jar"/>
-	<classpathentry kind="lib" path="libs/jaxb-impl.jar"/>
-	<classpathentry kind="lib" path="libs/log4j-1.2.15.jar"/>
-	<classpathentry kind="lib" path="libs/OpenRTM-aist-1.0.0.jar"/>
-	<classpathentry kind="lib" path="libs/jcommon-1.0.16.jar"/>
-	<classpathentry kind="lib" path="libs/jfreechart-1.0.13.jar"/>
-	<classpathentry kind="lib" path="libs/jfreechart-1.0.13-swt.jar"/>
-	<classpathentry kind="lib" path="libs/BenchmarkService.jar"/>
-	<classpathentry kind="lib" path="libs/collections-generic-4.01.jar"/>
-	<classpathentry kind="lib" path="libs/colt-1.2.0.jar"/>
-	<classpathentry kind="lib" path="libs/concurrent-1.3.4.jar"/>
-	<classpathentry kind="lib" path="libs/jung-algorithms-2.0-alpha3.jar"/>
-	<classpathentry kind="lib" path="libs/jung-api-2.0-alpha3.jar"/>
-	<classpathentry kind="lib" path="libs/jung-api-2.0-alpha3-tests.jar"/>
-	<classpathentry kind="lib" path="libs/jung-graph-impl-2.0-alpha3.jar"/>
-	<classpathentry kind="lib" path="libs/jung-io-2.0-alpha3.jar"/>
-	<classpathentry kind="lib" path="libs/jung-swt-rendering-2.0-alpha3.jar"/>
-	<classpathentry kind="lib" path="libs/jung-swt-samples-2.0-alpha3.jar"/>
-	<classpathentry kind="lib" path="libs/jung-swt-visualization-2.0-alpha3.jar"/>
-	<classpathentry kind="lib" path="libs/jyaml-1.3.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
