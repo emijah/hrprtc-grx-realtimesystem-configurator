@@ -6,8 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import OpenRTM.NamedStateLog;
-import OpenRTM.PlatformInfo;
+import OpenHRP.ExecutionProfileServicePackage.TimePeriod;
 import RTC.TimedState;
 
 public class BenchmarkResultItem extends TreeModelItem 
@@ -48,10 +47,10 @@ public class BenchmarkResultItem extends TreeModelItem
 		updateProperties();
 	}
 	
-	public BenchmarkResultItem(NamedStateLog namedLog, PlatformInfo pinfo, double cycle) 
+	public BenchmarkResultItem(OpenHRP.ExecutionProfileServicePackage.TimePeriod[] log, OpenHRP.ExecutionProfileServicePackage.PlatformInfo pinfo, double cycle) 
 	{
 		setCycle(cycle);
-		updateLog(namedLog);
+		updateLog(log);
 		updatePlatformInfo(pinfo);
 		updateProperties();
 	}
@@ -79,52 +78,30 @@ public class BenchmarkResultItem extends TreeModelItem
 		this.cycle = cycle;
 	}
 	
-	public void updateLog(NamedStateLog namedLog)
+	public void updateLog(OpenHRP.ExecutionProfileServicePackage.TimePeriod[] log)
 	{
-		TimedState[] log = namedLog.log;
 		if ( log.length == 0 ) {
 			return;
 		}
-		double lastT = 0;
-		if ( lastLog_ != null && lastLog_.size() > 0 ) {
-			lastT = lastLog_.get(lastLog_.size() - 2);
-			logCapacity = log.length - 2;
-		}
-		int lastCount = count;
-		//stddev = Math.pow(stddev, 2);
+		
+		mean = 0;
+		lastLog_.clear();
 		for (int i=0; i<log.length; i++) {
-			int pos1 = namedLog.headPos + i;
-			if ( pos1 > log.length-1 ) {
-				pos1 -= log.length;
-			}
-			int pos2 = ( pos1 == log.length-1 ) ? 0 : pos1+1;
-			double t1 = log[pos1].tm.sec + log[pos1].tm.nsec*1.0e-9;
-			if ( lastT < t1 && log[pos1].data == 1 && log[pos2].data == 2 ) {
-				double diff = log[pos2].tm.sec + log[pos2].tm.nsec*1.0e-9 - t1;
-				if ( diff > 0 ) {
-					max = Math.max(max, diff);
-					//min = Math.min(min, diff);
-					mean = (mean*count + diff)/(count + 1);
-					//stddev = (stddev*count + Math.pow(diff-mean, 2))/(count + 1);
-					count ++;
-					i++;
-					lastLog_.add(t1);
-					lastLog_.add(diff);
-					while ( lastLog_.size() > logCapacity ) {
-						lastLog_.remove(0);
-						lastLog_.remove(0);
-					}
-				}
-			}
+			double t1   = log[i].begin.sec + log[i].begin.nsec*1.0e-9;
+			double diff = log[i].end.sec   + log[i].end.nsec*1.0e-9 - t1;
+			max = Math.max(max, diff);
+			mean += diff;
+			lastLog_.add(t1);
+			lastLog_.add(diff);
 		}
-		//stddev = Math.sqrt(stddev);
-		if ( lastCount < count ) {
-			date   = new Date();
-			updateProperties();
-		}
+		mean /= log.length;
+		
+		count += log.length;
+		date   = new Date();
+		updateProperties();
 	}
 	
-	public void updatePlatformInfo(PlatformInfo pInfo)
+	public void updatePlatformInfo(OpenHRP.ExecutionProfileServicePackage.PlatformInfo pInfo)
 	{
 		setPropertyValue(PROPERTY_CPU_NUM, pInfo.cpuNum);
 		setPropertyValue(PROPERTY_CPU_FREQUENCY, pInfo.cpuFrequency);

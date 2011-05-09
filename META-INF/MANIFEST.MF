@@ -25,7 +25,9 @@ Bundle-ClassPath: src/com/generalrobotix/ui/realtimesystem_configurator/,
  libs/jung-swt-rendering-2.0-alpha3.jar,
  libs/jung-swt-samples-2.0-alpha3.jar,
  libs/jung-swt-visualization-2.0-alpha3.jar,
- libs/jyaml-1.3.jar
+ libs/jyaml-1.3.jar,
+ libs/ExecutionProfileService.jar,
+ .
 Bundle-Activator: com.generalrobotix.ui.realtimesystem_configurator.Activator
 Bundle-Vendor: General Roboix, Inc.
 Bundle-Localization: plugin
