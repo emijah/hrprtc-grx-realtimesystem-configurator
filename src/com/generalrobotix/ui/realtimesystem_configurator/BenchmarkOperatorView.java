@@ -47,12 +47,9 @@ import org.omg.CosNaming.NamingContext;
 import org.openrtp.namespaces.rts.version02.DataportConnector;
 import org.openrtp.namespaces.rts.version02.TargetPort;
 
-import OpenRTM.BenchmarkService;
-import OpenRTM.BenchmarkServiceHelper;
-import OpenRTM.NamedStateLog;
-import OpenRTM.PlatformInfo;
 import RTC.ConnectorProfile;
 import RTC.ConnectorProfileHolder;
+import RTC.ExecutionContext;
 import RTC.PortService;
 import RTC.RTObject;
 import RTM.Manager;
@@ -508,13 +505,13 @@ public class BenchmarkOperatorView extends ViewPart {
 			while ( ecs.hasNext() ) {
 				ExecutionContextItem ec = ecs.next();
 				RTObject ecOwner = null;
-				BenchmarkService bmSVC =  null;
+				OpenHRP.ExecutionProfileService bmSVC =  null;
 				try {
 					ec.setState(RTComponentItem.RTC_NOT_EXIST);
 					ecOwner = GrxRTMUtil.findRTC(ec.getOwnerName(), rnc);
 					if ( ecOwner != null ) {
 						ec.setState(RTComponentItem.RTC_SLEEP);
-						bmSVC = BenchmarkServiceHelper.narrow(ecOwner.get_sdo_service("BenchmarkService_EC0"));
+						bmSVC = OpenHRP.ExecutionProfileServiceHelper.narrow(ecOwner.get_owned_contexts()[0]);
 						if ( bmSVC != null ) {
 							ec.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
 						}
@@ -569,14 +566,12 @@ public class BenchmarkOperatorView extends ViewPart {
 		boolean ret = false;
 		if ( currentSystem != null ) {
 			NamingContext rnc = GrxRTMUtil.getRootNamingContext(cmbRobotHost_.getText(), robotPort_);
-			List<NamedStateLog[]> l = new ArrayList<NamedStateLog[]>();
 			List<ExecutionContextItem> eclist = currentSystem.getExecutionContexts();
+			
 			for (int i=0; i<eclist.size(); i++) {
-				l.add(getLogs(eclist.get(i), rnc));
+				updateLog(eclist.get(i), rnc);
 			}
-			for (int i=0; i<eclist.size(); i++) {
-				setLogs(eclist.get(i), rnc, l.get(i));
-			}
+			
 			GrxRTMUtil.releaseObject(rnc);
 			rtsViewer.refresh();
 			TimingChartView tview = TimingChartView.getInstance();
@@ -588,67 +583,45 @@ public class BenchmarkOperatorView extends ViewPart {
 		return ret;
 	}
 	
-	private NamedStateLog[] getLogs(ExecutionContextItem ecModel, NamingContext rnc)
+	private void updateLog(ExecutionContextItem ecModel, NamingContext rnc)
 	{
 		RTObject rtc = null;
-		BenchmarkService bmSVC = null;
+		OpenHRP.ExecutionProfileService bmSVC = null;
 		try {
 			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
 			if ( rtc != null ) {
-				bmSVC =  BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
-				if ( bmSVC != null ) {
-					return bmSVC.get_logs();
-				}	
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			GrxRTMUtil.releaseObject(rtc);
-			GrxRTMUtil.releaseObject(bmSVC);
-		}
-		return null;
-	}
-	
-	private boolean setLogs(ExecutionContextItem ecModel, NamingContext rnc, NamedStateLog[] logs)
-	{
-		RTObject rtc = null;
-		BenchmarkService bmSVC = null;
-		try {
-			// get information from target system
-			double cycle = 1.0/ecModel.getRate();
-			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
-			PlatformInfo pInfo = null;
-			if ( logs != null ) {
-				bmSVC = BenchmarkServiceHelper.narrow(rtc.get_sdo_service("BenchmarkService_EC0"));
-				pInfo = bmSVC.get_platform_info();
-			}
-			// update logs
-			Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
-			while ( it.hasNext() ) {
-				RTComponentItem model = (RTComponentItem)it.next();
-				BenchmarkResultItem result = model.getResult();
-				if ( logs == null ) {
-					result.resetLastLog();
-				} else {
-					result.setCycle(cycle);
-					result.updatePlatformInfo(pInfo);
-					for (int i=0; i<logs.length; i++) {
-						if ( logs[i].id.equals(model.getName()) ) {
-							result.updateLog(logs[i]);
-							break;
+				ExecutionContext ec = rtc.get_owned_contexts()[0];
+				if ( ec.is_running() ) {
+					bmSVC =  OpenHRP.ExecutionProfileServiceHelper.narrow(rtc.get_owned_contexts()[0]);
+					OpenHRP.ExecutionProfileServicePackage.Profile prof = bmSVC.getProfile();
+					OpenHRP.ExecutionProfileServicePackage.PlatformInfo pInfo = bmSVC.getPlatformInfo();
+					// update logs
+					Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
+					while ( it.hasNext() ) {
+						RTComponentItem model = (RTComponentItem)it.next();
+						BenchmarkResultItem result = model.getResult();
+						if ( prof.last_processes.length == 0 ) {
+							result.resetLastLog();
+						} else {
+							result.setCycle(1.0/ecModel.getRate());
+							result.updatePlatformInfo(pInfo);
+							for (int i=0; i<prof.ids.length; i++) {
+								if ( prof.ids[i].equals(model.getName()) ) {
+									result.updateLog(prof.last_processes[i]);
+									break;
+								}
+							}
 						}
 					}
+					ecModel.calcSummation();	
 				}
 			}
-			ecModel.calcSummation();
-			return true;
 		} catch (Exception e) {
 			e.printStackTrace();
 		} finally {
 			GrxRTMUtil.releaseObject(rtc);
 			GrxRTMUtil.releaseObject(bmSVC);
 		}
-		return false;
 	}
 	
 	private void save()
