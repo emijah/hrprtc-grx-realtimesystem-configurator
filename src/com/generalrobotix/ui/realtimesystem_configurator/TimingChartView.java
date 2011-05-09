@@ -37,7 +37,7 @@ public class TimingChartView extends ViewPart
 	private List<ChartComposite> chartList = new ArrayList<ChartComposite>();
 	private Composite parent;
 	private static TimingChartView this_;
-	private TreeModelItem selectedItem_;
+	private RTSystemItem selectedItem_;
 	
 	private static final int INITIAL_CHART_NUM = 3;
 	private static final String XAXIS_LABEL = "Time[msec]";
@@ -89,14 +89,14 @@ public class TimingChartView extends ViewPart
 	        			List<TreeModelItem> children = item.getChildren();
 	        			if ( children.size() > 0 && children.get(0) instanceof RTSystemItem ) {
 	        				selectedItem_ = (RTSystemItem)children.get(0);
-	        				updateCharts();
+	        				updateCharts(selectedItem_);
 	        			} else {
 	        				Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
 	        				while( it.hasNext() ) {
 	        					TreeModelItem m = it.next();
 	        					if ( m instanceof RTSystemItem ) {
 	        						selectedItem_ = (RTSystemItem)m;
-	        						updateCharts();
+	        						updateCharts(selectedItem_);
 	        						break;
 	        					}
 	        				}
@@ -182,7 +182,7 @@ public class TimingChartView extends ViewPart
 			showMode = 0;
 		}
 		actChangeMode.setText(SHOW_MODE_LABELS[showMode]);
-		updateCharts();
+		updateCharts(selectedItem_);
 		showAllValue();
 	}
 	
@@ -230,9 +230,9 @@ public class TimingChartView extends ViewPart
 		}
 	}
 	
-	synchronized public void updateCharts()
+	synchronized public void updateCharts(RTSystemItem system)
 	{
-		Iterator<ExecutionContextItem> checkedItems = ((RTSystemItem)selectedItem_).getExecutionContexts().iterator();
+		Iterator<ExecutionContextItem> checkedItems = system.getExecutionContexts().iterator();
 		int index = 0;
 		isOffsetUpdated = false;
 		offset = 0;

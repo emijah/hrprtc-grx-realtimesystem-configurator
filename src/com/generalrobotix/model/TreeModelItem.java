@@ -36,7 +36,7 @@ public class TreeModelItem implements IPropertySource
 		return nodeName;
 	}
 	
-	protected void setName(String name)
+	public void setName(String name)
 	{
 		nodeName = name;
 		properties.put("name", name);

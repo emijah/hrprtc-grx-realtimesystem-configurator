@@ -8,7 +8,14 @@ import org.openrtp.namespaces.rts.version02.Participants;
 
 public class ExecutionContextItem extends RTComponentItem{
 	private static final String ICON_PATH = "icons/ExecutionContext.png";
-	private ExecutionContext ec;
+	public ExecutionContext ec;
+	
+	public ExecutionContextItem(RTSystemItem rtsystem) 
+	{
+		super(rtsystem);
+		setIconPath(ICON_PATH);
+		this.ec = new ExecutionContext();
+	}
 	
 	public ExecutionContextItem(RTSystemItem rtsystem, Component comp) 
 	{
