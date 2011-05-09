@@ -24,11 +24,20 @@ public class RTSystemItem extends TreeModelItem
     private XmlHandler rtsProfileOperator = new XmlHandler();
 	private RtsProfileExt profile;
 	private File file;
-	private List<RTComponentItem> members;
+	public List<RTComponentItem> members;
 	private List<RTCConnection> rtcConnections;
-	private List<ExecutionContextItem> eclist;
+	public List<ExecutionContextItem> eclist;
 	private String version;
 	private static final String ICON_PATH = "icons/grxRTS.png";
+	
+	public RTSystemItem()
+	{
+		setRoot(this);
+		members = new ArrayList<RTComponentItem>();
+		rtcConnections = new ArrayList<RTCConnection>();
+		eclist  = new ArrayList<ExecutionContextItem>();
+		setIconPath(ICON_PATH);
+	}
 	
 	public RTSystemItem(String rtsProfilePath)
 	{

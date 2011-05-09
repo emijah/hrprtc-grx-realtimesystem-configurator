@@ -8,7 +8,7 @@ import org.openrtp.namespaces.rts.version02.Component;
 
 public class RTComponentItem extends TreeModelItem
 {
-	private Component component;
+	public Component component;
 	private RTSystemItem rtsystem;
 	private BenchmarkResultItem result;
 	private static final String ICON_PATH = "icons/Component.png";
@@ -18,7 +18,14 @@ public class RTComponentItem extends TreeModelItem
 	public static final int RTC_BENCHMARK_AVAILABLE = 3;
 	protected int state_ = RTC_NOT_EXIST;
 	
-	
+    public RTComponentItem(RTSystemItem rtsystem)
+    {
+    	setRoot(rtsystem.getRoot());
+    	this.rtsystem = rtsystem;
+    	component = new Component();
+    	setIconPath(ICON_PATH);
+    }
+    
     public RTComponentItem(RTSystemItem rtsystem, Component comp)
     {
     	setRoot(rtsystem.getRoot());

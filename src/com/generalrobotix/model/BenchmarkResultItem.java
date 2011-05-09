@@ -6,9 +6,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import OpenHRP.ExecutionProfileServicePackage.TimePeriod;
-import RTC.TimedState;
-
 public class BenchmarkResultItem extends TreeModelItem 
 { 
 	public static final String PROPERTY_DATE = "Date";
@@ -38,9 +35,6 @@ public class BenchmarkResultItem extends TreeModelItem
 	public List<Double> lastLog_ = new ArrayList<Double>();
 	public Map<Object, Object> properties = new LinkedHashMap<Object, Object>();
 	
-	private static int LOG_CAPACITY = 500;
-	private int logCapacity = LOG_CAPACITY;
-
 	public BenchmarkResultItem() 
 	{
 		reset();

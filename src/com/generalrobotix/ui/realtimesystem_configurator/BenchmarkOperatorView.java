@@ -47,6 +47,7 @@ import org.omg.CosNaming.NamingContext;
 import org.openrtp.namespaces.rts.version02.DataportConnector;
 import org.openrtp.namespaces.rts.version02.TargetPort;
 
+import RTC.ComponentProfile;
 import RTC.ConnectorProfile;
 import RTC.ConnectorProfileHolder;
 import RTC.ExecutionContext;
@@ -62,12 +63,14 @@ import com.generalrobotix.model.TreeModelItem;
 import com.generalrobotix.ui.util.GrxRTMUtil;
 
 public class BenchmarkOperatorView extends ViewPart {
+	private RTSystemItem onlineSystem;
 	private RTSystemItem currentSystem;
 	private TreeViewer rtsViewer;
 	private Button btnUpdate;
 	private Button btnSave;
 	private Combo cmbInterval_;
 	private Combo cmbRobotHost_;
+	private Text  text;
 	
     private static Color black_;
     private static Color red_;
@@ -95,13 +98,13 @@ public class BenchmarkOperatorView extends ViewPart {
 	public void createPartControl(Composite parent)
 	{		
 		parent.setLayout(new GridLayout(1, false));
-		final Text text = new Text(parent, SWT.NONE);
+		text = new Text(parent, SWT.NONE);
 		text.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
 		rtsViewer = setupTreeViewer(parent);
 		
 		Composite btnPanel = new Composite(parent, SWT.NONE);
 		btnPanel.setLayout(new RowLayout());
-		Button btnStartup = new Button(btnPanel, SWT.NONE);
+/*		Button btnStartup = new Button(btnPanel, SWT.NONE);
 		btnStartup.setText("Startup System");
 		btnStartup.addSelectionListener(new SelectionListener() {
 			public void widgetDefaultSelected(SelectionEvent e) {}
@@ -113,7 +116,7 @@ public class BenchmarkOperatorView extends ViewPart {
 				rtsViewer.refresh();
 			}	
 		});
-		
+*/		
 		final Button btnReset = new Button(btnPanel, SWT.NONE);
 		btnReset.setText("Reset Log");
 		btnReset.addSelectionListener(new SelectionListener() {
@@ -564,64 +567,90 @@ public class BenchmarkOperatorView extends ViewPart {
 	private boolean updateLogAction()
 	{
 		boolean ret = false;
-		if ( currentSystem != null ) {
-			NamingContext rnc = GrxRTMUtil.getRootNamingContext(cmbRobotHost_.getText(), robotPort_);
-			List<ExecutionContextItem> eclist = currentSystem.getExecutionContexts();
-			
-			for (int i=0; i<eclist.size(); i++) {
-				updateLog(eclist.get(i), rnc);
-			}
-			
-			GrxRTMUtil.releaseObject(rnc);
-			rtsViewer.refresh();
-			TimingChartView tview = TimingChartView.getInstance();
-			if ( tview != null ) {
-				tview.updateCharts();
-			}
-			checkState();
-		}
-		return ret;
-	}
+		
+		if ( onlineSystem == null )
+			onlineSystem = new RTSystemItem();
+		onlineSystem.members.clear();
+		onlineSystem.eclist.clear();
+		onlineSystem.removeChildren();
 	
-	private void updateLog(ExecutionContextItem ecModel, NamingContext rnc)
-	{
-		RTObject rtc = null;
-		OpenHRP.ExecutionProfileService bmSVC = null;
-		try {
-			rtc = GrxRTMUtil.findRTC(ecModel.getOwnerName(), rnc);
-			if ( rtc != null ) {
-				ExecutionContext ec = rtc.get_owned_contexts()[0];
-				if ( ec.is_running() ) {
-					bmSVC =  OpenHRP.ExecutionProfileServiceHelper.narrow(rtc.get_owned_contexts()[0]);
-					OpenHRP.ExecutionProfileServicePackage.Profile prof = bmSVC.getProfile();
-					OpenHRP.ExecutionProfileServicePackage.PlatformInfo pInfo = bmSVC.getPlatformInfo();
+		currentSystem = onlineSystem;
+		
+		Manager mgr = GrxRTMUtil.findRTCmanager(cmbRobotHost_.getText(), managerPort_);
+		RTObject[] rtcs = mgr.get_components();
+		List<ComponentProfile> cprofs = new ArrayList<ComponentProfile>();
+		List<RTComponentItem>  rtcItems = new ArrayList<RTComponentItem>();
+	
+		for (int i=0; i<rtcs.length; i++) {
+			RTComponentItem rtcItem = new RTComponentItem(currentSystem);
+			ComponentProfile cprof = rtcs[i].get_component_profile();
+			rtcItem.setName(cprof.instance_name);
+			rtcItem.component.setId("RTC:"+cprof.vendor+":"+cprof.category+":"+cprof.type_name);
+			rtcItem.component.setInstanceName(rtcs[i].get_component_profile().instance_name);
+	        currentSystem.members.add(rtcItem);
+	        currentSystem.add(rtcItem);
+	        cprofs.add(cprof);
+	        rtcItems.add(rtcItem);
+		}
+		
+		for (int i=0; i<rtcs.length; i++) {
+			ExecutionContext[] ecs = rtcs[i].get_owned_contexts();
+			for (int j=0; j<ecs.length; j++) {
+				if ( ecs[j].is_running() ) {
+					ExecutionContextItem ecItem = new ExecutionContextItem(currentSystem);
+					ecItem.setName(cprofs.get(i).instance_name);
+					ecItem.ec.setId(Integer.toString(rtcs[j].get_context_handle(ecs[j])));
+					ecItem.ec.setKind(ecs[j].get_kind().toString());
+					ecItem.ec.setRate(ecs[j].get_rate());
+					ecItem.add(rtcItems.get(i));
+					currentSystem.members.add(ecItem);
+					currentSystem.eclist.add(ecItem);
+					currentSystem.add(ecItem);
+					
+					OpenHRP.ExecutionProfileServicePackage.Profile eprof = null;
+					OpenHRP.ExecutionProfileServicePackage.PlatformInfo pInfo = null;
+					try {
+						OpenHRP.ExecutionProfileService epSVC = OpenHRP.ExecutionProfileServiceHelper.narrow(ecs[j]);
+						eprof = epSVC.getProfile();
+						pInfo = epSVC.getPlatformInfo();
+					} catch (Exception e) {
+						continue;
+					}
+					
 					// update logs
-					Iterator<TreeModelItem> it = ecModel.getChildren().iterator();
-					while ( it.hasNext() ) {
-						RTComponentItem model = (RTComponentItem)it.next();
-						BenchmarkResultItem result = model.getResult();
-						if ( prof.last_processes.length == 0 ) {
+					String[] participates = eprof.ids;
+					for (int k=0; k<participates.length; k++) {
+						RTComponentItem rtcItem = (RTComponentItem) currentSystem.find(participates[k]);
+						if (rtcItem == null) {
+							continue;
+						}
+						if ( ecItem.find(participates[k]) == null )
+							ecItem.add(rtcItem);
+						BenchmarkResultItem result = rtcItem.getResult();
+						if ( eprof.last_processes.length == 0 ) {
 							result.resetLastLog();
 						} else {
-							result.setCycle(1.0/ecModel.getRate());
+							result.setCycle(1.0/ecItem.getRate());
 							result.updatePlatformInfo(pInfo);
-							for (int i=0; i<prof.ids.length; i++) {
-								if ( prof.ids[i].equals(model.getName()) ) {
-									result.updateLog(prof.last_processes[i]);
-									break;
-								}
-							}
+							result.updateLog(eprof.last_processes[k]);
 						}
 					}
-					ecModel.calcSummation();	
+					ecItem.calcSummation();
 				}
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			GrxRTMUtil.releaseObject(rtc);
-			GrxRTMUtil.releaseObject(bmSVC);
 		}
+
+		//checkState();
+		rtsViewer.setInput(currentSystem);
+		text.setText("Running Execution Contexts");
+		rtsViewer.expandAll();
+		rtsViewer.refresh();
+		TimingChartView tview = TimingChartView.getInstance();
+		if ( tview != null ) {
+			tview.updateCharts(currentSystem);
+		}
+		
+		return ret;
 	}
 	
 	private void save()
