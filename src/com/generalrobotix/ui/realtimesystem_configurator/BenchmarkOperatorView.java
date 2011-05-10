@@ -624,6 +624,7 @@ public class BenchmarkOperatorView extends ViewPart {
 						}
 						OpenHRP.ExecutionProfileServicePackage.PlatformInfo pInfo = epSVC.getPlatformInfo();
 						OpenHRP.ExecutionProfileServicePackage.Profile eprof = epSVC.getProfile();
+						epSVC.resetProfile();
 						
 						for (int k=0; k<eprof.ids.length; k++) {
 							RTComponentItem rtcItem = (RTComponentItem) onlineSystem.find(eprof.ids[k]);
@@ -655,7 +656,7 @@ public class BenchmarkOperatorView extends ViewPart {
 				}
 				OpenHRP.ExecutionProfileServicePackage.Profile eprof = epSVC.getProfile();
 				
-				ecItem.getResult().updateMax(eprof.max_period);
+				ecItem.getResult().updateMax(eprof.max_total_process);
 				String[] participates = eprof.ids;
 				for (int k=0; k<participates.length; k++) {
 					RTComponentItem rtcItem = (RTComponentItem) ecItem.find(participates[k]);
