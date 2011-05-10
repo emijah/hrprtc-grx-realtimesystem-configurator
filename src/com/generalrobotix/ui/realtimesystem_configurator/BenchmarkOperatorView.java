@@ -65,6 +65,7 @@ import com.generalrobotix.ui.util.GrxRTMUtil;
 public class BenchmarkOperatorView extends ViewPart {
 	private RTSystemItem onlineSystem;
 	private RTSystemItem currentSystem;
+	private List<RTC.ExecutionContext> onlineEcList;
 	private TreeViewer rtsViewer;
 	private Button btnUpdate;
 	private Button btnSave;
@@ -85,7 +86,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	private int managerPort_ = 2810;
 	private int loggingInterval_ = DEFAULT_LOGGING_INTERVAL;
 	
-	boolean isTest = false;	
+	boolean isTest = false;
     
 	public BenchmarkOperatorView()
 	{
@@ -97,6 +98,8 @@ public class BenchmarkOperatorView extends ViewPart {
 	@Override
 	public void createPartControl(Composite parent)
 	{		
+		onlineEcList = new ArrayList<ExecutionContext>();
+		
 		parent.setLayout(new GridLayout(1, false));
 		text = new Text(parent, SWT.NONE);
 		text.setLayoutData(new GridData(GridData.FILL_HORIZONTAL));
@@ -137,7 +140,6 @@ public class BenchmarkOperatorView extends ViewPart {
 			public void widgetSelected(SelectionEvent e)
 			{
 				if ( ((Button)e.getSource()).getSelection() ) {
-					resetLogAction();
 					Display display = Display.getCurrent();
 					if ( !display.isDisposed() ) {
 						display.timerExec(100, new UpdateLogThread());
@@ -490,12 +492,13 @@ public class BenchmarkOperatorView extends ViewPart {
 	
 	private void resetLogAction() 
 	{
-		if ( currentSystem != null ) {
+		/*if ( currentSystem != null ) {
 			Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
 			while ( it.hasNext() ) {
 				it.next().getResult().reset();
 			}
-		}
+		}*/
+		onlineSystem = null;
 	}
 	
 	private void checkState()
@@ -567,84 +570,108 @@ public class BenchmarkOperatorView extends ViewPart {
 	private boolean updateLogAction()
 	{
 		boolean ret = false;
-		
-		if ( onlineSystem == null )
+			
+		// update model
+		if ( onlineSystem == null ) 
+		{
 			onlineSystem = new RTSystemItem();
-		onlineSystem.members.clear();
-		onlineSystem.eclist.clear();
-		onlineSystem.removeChildren();
-	
-		currentSystem = onlineSystem;
+			
+			Manager mgr = GrxRTMUtil.findRTCmanager(cmbRobotHost_.getText(), managerPort_);
+			RTObject[] rtcs = mgr.get_components();
 		
-		Manager mgr = GrxRTMUtil.findRTCmanager(cmbRobotHost_.getText(), managerPort_);
-		RTObject[] rtcs = mgr.get_components();
-		List<ComponentProfile> cprofs = new ArrayList<ComponentProfile>();
-		List<RTComponentItem>  rtcItems = new ArrayList<RTComponentItem>();
-	
-		for (int i=0; i<rtcs.length; i++) {
-			RTComponentItem rtcItem = new RTComponentItem(currentSystem);
-			ComponentProfile cprof = rtcs[i].get_component_profile();
-			rtcItem.setName(cprof.instance_name);
-			rtcItem.component.setId("RTC:"+cprof.vendor+":"+cprof.category+":"+cprof.type_name);
-			rtcItem.component.setInstanceName(rtcs[i].get_component_profile().instance_name);
-	        currentSystem.members.add(rtcItem);
-	        currentSystem.add(rtcItem);
-	        cprofs.add(cprof);
-	        rtcItems.add(rtcItem);
-		}
+			List<ComponentProfile> cprofs = new ArrayList<ComponentProfile>();
+			List<RTComponentItem>  rtcItems = new ArrayList<RTComponentItem>();
 		
-		for (int i=0; i<rtcs.length; i++) {
-			ExecutionContext[] ecs = rtcs[i].get_owned_contexts();
-			RTComponentItem ecOwner = rtcItems.get(i);
-			for (int j=0; j<ecs.length; j++) {
-				if ( ecs[j].is_running() ) {
-					ExecutionContextItem ecItem = new ExecutionContextItem(currentSystem);
-					ecItem.setName(cprofs.get(i).instance_name);
-					ecItem.ec.setId(Integer.toString(rtcs[j].get_context_handle(ecs[j])));
-					ecItem.ec.setKind(ecs[j].get_kind().toString());
-					ecItem.ec.setRate(ecs[j].get_rate());
-					currentSystem.members.add(ecItem);
-					currentSystem.eclist.add(ecItem);
-					currentSystem.add(ecItem);
-					
-					OpenHRP.ExecutionProfileServicePackage.Profile eprof = null;
-					OpenHRP.ExecutionProfileServicePackage.PlatformInfo pInfo = null;
-					try {
-						OpenHRP.ExecutionProfileService epSVC = OpenHRP.ExecutionProfileServiceHelper.narrow(ecs[j]);
-						eprof = epSVC.getProfile();
-						pInfo = epSVC.getPlatformInfo();
-						ecItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
-					} catch (Exception e) {
-						ecItem.setState(RTComponentItem.RTC_ACTIVE);
-						ecOwner.setState(RTComponentItem.RTC_ACTIVE);
-						ecItem.add(ecOwner);
-						continue;
-					}
-					
-					// update logs
-					String[] participates = eprof.ids;
-					for (int k=0; k<participates.length; k++) {
-						RTComponentItem rtcItem = (RTComponentItem) currentSystem.find(participates[k]);
-						if (rtcItem == null) {
+			for (int i=0; i<rtcs.length; i++) {
+				RTComponentItem rtcItem = new RTComponentItem(onlineSystem);
+				ComponentProfile cprof = rtcs[i].get_component_profile();
+				rtcItem.setName(cprof.instance_name);
+				rtcItem.component.setId("RTC:"+cprof.vendor+":"+cprof.category+":"+cprof.type_name);
+				rtcItem.component.setInstanceName(rtcs[i].get_component_profile().instance_name);
+		        onlineSystem.members.add(rtcItem);
+		        onlineSystem.add(rtcItem);
+		        cprofs.add(cprof);
+		        rtcItems.add(rtcItem);
+			}
+			for (int i=0; i<rtcs.length; i++) {
+				ExecutionContext[] ecs = rtcs[i].get_owned_contexts();
+				RTComponentItem ecOwner = rtcItems.get(i);
+				for (int j=0; j<ecs.length; j++) {
+					if ( ecs[j].is_running() ) {
+						onlineEcList.add(ecs[j]);
+						
+						ExecutionContextItem ecItem = new ExecutionContextItem(onlineSystem);
+						ecItem.setName(cprofs.get(i).instance_name);
+						ecItem.ec.setId(Integer.toString(rtcs[j].get_context_handle(ecs[j])));
+						ecItem.ec.setKind(ecs[j].get_kind().toString());
+						ecItem.ec.setRate(ecs[j].get_rate());
+						onlineSystem.members.add(ecItem);
+						onlineSystem.eclist.add(ecItem);
+						onlineSystem.add(ecItem);
+						
+						OpenHRP.ExecutionProfileService epSVC = null;
+						try {
+							epSVC = OpenHRP.ExecutionProfileServiceHelper.narrow(ecs[j]);
+							ecItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+						} catch (Exception e) {
+							ecItem.setState(RTComponentItem.RTC_ACTIVE);
+							ecOwner.setState(RTComponentItem.RTC_ACTIVE);
+							ecItem.add(ecOwner);
 							continue;
 						}
-						rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
-						ecItem.add(rtcItem);
-						BenchmarkResultItem result = rtcItem.getResult();
-						if ( eprof.last_processes.length == 0 ) {
-							result.resetLastLog();
-						} else {
-							result.setCycle(1.0/ecItem.getRate());
+						OpenHRP.ExecutionProfileServicePackage.PlatformInfo pInfo = epSVC.getPlatformInfo();
+						OpenHRP.ExecutionProfileServicePackage.Profile eprof = epSVC.getProfile();
+						
+						for (int k=0; k<eprof.ids.length; k++) {
+							RTComponentItem rtcItem = (RTComponentItem) onlineSystem.find(eprof.ids[k]);
+							if (rtcItem == null) {
+								continue;
+							}
+							rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+							BenchmarkResultItem result = rtcItem.getResult();
 							result.updatePlatformInfo(pInfo);
-							result.updateLog(eprof.last_processes[k]);
+							result.reset();
+							ecItem.add(rtcItem);
 						}
 					}
-					ecItem.calcSummation();
 				}
 			}
 		}
-
-		//checkState();
+			
+		// update log data
+		for (int i=0; i<onlineSystem.eclist.size(); i++) {
+			ExecutionContextItem ecItem = onlineSystem.eclist.get(i);
+			if ( onlineEcList.get(i).is_running() ) {
+				OpenHRP.ExecutionProfileService epSVC = null;
+				try {
+					epSVC = OpenHRP.ExecutionProfileServiceHelper.narrow(onlineEcList.get(i));
+					ecItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+				} catch (Exception e) {
+					ecItem.setState(RTComponentItem.RTC_ACTIVE);
+					continue;
+				}
+				OpenHRP.ExecutionProfileServicePackage.Profile eprof = epSVC.getProfile();		
+				// update logs
+				String[] participates = eprof.ids;
+				for (int k=0; k<participates.length; k++) {
+					RTComponentItem rtcItem = (RTComponentItem) ecItem.find(participates[k]);
+					if (rtcItem == null) {
+						continue;
+					}
+					rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+					BenchmarkResultItem result = rtcItem.getResult();
+					if ( eprof.last_processes.length == 0 ) {
+						result.resetLastLog();
+					} else {
+						result.setCycle(1.0/ecItem.getRate());
+						result.updateLog(eprof.last_processes[k]);
+					}
+				}
+				ecItem.calcSummation();
+			}
+		}
+		
+		currentSystem = onlineSystem;
 		
 		rtsViewer.setInput(currentSystem);
 		text.setText("Running Execution Contexts");
