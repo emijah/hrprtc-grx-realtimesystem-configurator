@@ -1,5 +1,6 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -271,6 +272,15 @@ public class TimingChartView extends ViewPart
 		JFreeChart chart = chartList.get(index).getChart();
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
 		chart.setTitle("EC : "+item.getName());
+		
+		float dash[] = {10.0f, 3.0f};
+		BasicStroke dashStroke = new BasicStroke(5.0f, 
+                BasicStroke.CAP_BUTT, 
+                BasicStroke.JOIN_MITER, 
+                3.0f,
+                dash,
+                0.0f);
+		chart.setBorderStroke(dashStroke);
 		
 		XYSeriesCollection dataset = new XYSeriesCollection();
 		dataset.addSeries(new XYSeries("cycle"));

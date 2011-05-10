@@ -41,14 +41,6 @@ public class BenchmarkResultItem extends TreeModelItem
 		updateProperties();
 	}
 	
-	public BenchmarkResultItem(OpenHRP.ExecutionProfileServicePackage.TimePeriod[] log, OpenHRP.ExecutionProfileServicePackage.PlatformInfo pinfo, double cycle) 
-	{
-		setCycle(cycle);
-		updateLog(log);
-		updatePlatformInfo(pinfo);
-		updateProperties();
-	}
-	
 	public BenchmarkResultItem(Map<Object, Object> properties) 
 	{
 		count = Integer.parseInt(properties.get(PROPERTY_DATACOUNT).toString());
@@ -72,24 +64,28 @@ public class BenchmarkResultItem extends TreeModelItem
 		this.cycle = cycle;
 	}
 	
-	public void updateLog(OpenHRP.ExecutionProfileServicePackage.TimePeriod[] log)
+	public void updateMax(double val)
+	{
+		max = Math.max(max, val);
+	}
+	
+	public void updateLastPeriod(OpenHRP.ExecutionProfileServicePackage.TimePeriod[] log)
 	{
 		if ( log.length == 0 ) {
 			return;
 		}
 		
-		mean = 0;
 		lastLog_.clear();
+		double sum = 0;
 		for (int i=0; i<log.length; i++) {
 			double t1   = log[i].begin.sec + log[i].begin.nsec*1.0e-9;
 			double diff = log[i].end.sec   + log[i].end.nsec*1.0e-9 - t1;
-			max = Math.max(max, diff);
-			mean += diff;
+			//max = Math.max(max, diff);
+			sum += diff;
 			lastLog_.add(t1);
 			lastLog_.add(diff);
 		}
-		mean /= log.length;
-		
+		mean = (mean*count + sum)/(count + log.length);
 		count += log.length;
 		date   = new Date();
 		updateProperties();
