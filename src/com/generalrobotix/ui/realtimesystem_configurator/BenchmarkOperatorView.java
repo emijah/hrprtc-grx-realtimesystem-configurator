@@ -595,6 +595,7 @@ public class BenchmarkOperatorView extends ViewPart {
 		
 		for (int i=0; i<rtcs.length; i++) {
 			ExecutionContext[] ecs = rtcs[i].get_owned_contexts();
+			RTComponentItem ecOwner = rtcItems.get(i);
 			for (int j=0; j<ecs.length; j++) {
 				if ( ecs[j].is_running() ) {
 					ExecutionContextItem ecItem = new ExecutionContextItem(currentSystem);
@@ -602,7 +603,6 @@ public class BenchmarkOperatorView extends ViewPart {
 					ecItem.ec.setId(Integer.toString(rtcs[j].get_context_handle(ecs[j])));
 					ecItem.ec.setKind(ecs[j].get_kind().toString());
 					ecItem.ec.setRate(ecs[j].get_rate());
-					ecItem.add(rtcItems.get(i));
 					currentSystem.members.add(ecItem);
 					currentSystem.eclist.add(ecItem);
 					currentSystem.add(ecItem);
@@ -613,7 +613,11 @@ public class BenchmarkOperatorView extends ViewPart {
 						OpenHRP.ExecutionProfileService epSVC = OpenHRP.ExecutionProfileServiceHelper.narrow(ecs[j]);
 						eprof = epSVC.getProfile();
 						pInfo = epSVC.getPlatformInfo();
+						ecItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
 					} catch (Exception e) {
+						ecItem.setState(RTComponentItem.RTC_ACTIVE);
+						ecOwner.setState(RTComponentItem.RTC_ACTIVE);
+						ecItem.add(ecOwner);
 						continue;
 					}
 					
@@ -624,8 +628,8 @@ public class BenchmarkOperatorView extends ViewPart {
 						if (rtcItem == null) {
 							continue;
 						}
-						if ( ecItem.find(participates[k]) == null )
-							ecItem.add(rtcItem);
+						rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+						ecItem.add(rtcItem);
 						BenchmarkResultItem result = rtcItem.getResult();
 						if ( eprof.last_processes.length == 0 ) {
 							result.resetLastLog();
@@ -641,6 +645,7 @@ public class BenchmarkOperatorView extends ViewPart {
 		}
 
 		//checkState();
+		
 		rtsViewer.setInput(currentSystem);
 		text.setText("Running Execution Contexts");
 		rtsViewer.expandAll();
