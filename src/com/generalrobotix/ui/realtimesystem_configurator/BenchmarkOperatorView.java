@@ -567,15 +567,17 @@ public class BenchmarkOperatorView extends ViewPart {
 		}
 	}
 	
-	private boolean updateLogAction()
+	private void updateLogAction()
 	{
-		boolean ret = false;
+		boolean updateModel = false;
 			
 		// update model
 		if ( onlineSystem == null ) 
 		{
+			updateModel = true;
 			onlineSystem = new RTSystemItem();
-			
+			onlineEcList.clear();
+
 			Manager mgr = GrxRTMUtil.findRTCmanager(cmbRobotHost_.getText(), managerPort_);
 			RTObject[] rtcs = mgr.get_components();
 		
@@ -605,6 +607,7 @@ public class BenchmarkOperatorView extends ViewPart {
 						ecItem.ec.setId(Integer.toString(rtcs[j].get_context_handle(ecs[j])));
 						ecItem.ec.setKind(ecs[j].get_kind().toString());
 						ecItem.ec.setRate(ecs[j].get_rate());
+						ecItem.getResult().setCycle(1.0/ecItem.getRate());
 						onlineSystem.members.add(ecItem);
 						onlineSystem.eclist.add(ecItem);
 						onlineSystem.add(ecItem);
@@ -650,8 +653,9 @@ public class BenchmarkOperatorView extends ViewPart {
 					ecItem.setState(RTComponentItem.RTC_ACTIVE);
 					continue;
 				}
-				OpenHRP.ExecutionProfileServicePackage.Profile eprof = epSVC.getProfile();		
-				// update logs
+				OpenHRP.ExecutionProfileServicePackage.Profile eprof = epSVC.getProfile();
+				
+				ecItem.getResult().updateMax(eprof.max_period);
 				String[] participates = eprof.ids;
 				for (int k=0; k<participates.length; k++) {
 					RTComponentItem rtcItem = (RTComponentItem) ecItem.find(participates[k]);
@@ -664,25 +668,29 @@ public class BenchmarkOperatorView extends ViewPart {
 						result.resetLastLog();
 					} else {
 						result.setCycle(1.0/ecItem.getRate());
-						result.updateLog(eprof.last_processes[k]);
+						result.updateMax(eprof.max_processes[k]);
+						result.updateLastPeriod(eprof.last_processes[k]);
 					}
 				}
 				ecItem.calcSummation();
 			}
 		}
 		
-		currentSystem = onlineSystem;
-		
-		rtsViewer.setInput(currentSystem);
-		text.setText("Running Execution Contexts");
-		rtsViewer.expandAll();
-		rtsViewer.refresh();
-		TimingChartView tview = TimingChartView.getInstance();
-		if ( tview != null ) {
-			tview.updateCharts(currentSystem);
+		if ( updateModel || currentSystem != onlineSystem ) {
+			currentSystem = onlineSystem;
+			rtsViewer.setInput(currentSystem);
+			text.setText("Running Execution Contexts");
 		}
 		
-		return ret;
+		if ( currentSystem != null ) {
+			rtsViewer.expandAll();
+			rtsViewer.refresh();
+		
+			TimingChartView tview = TimingChartView.getInstance();
+			if ( tview != null ) {
+				tview.updateCharts(currentSystem);
+			}
+		}
 	}
 	
 	private void save()
