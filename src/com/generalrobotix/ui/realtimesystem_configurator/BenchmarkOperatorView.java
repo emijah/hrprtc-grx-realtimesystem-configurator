@@ -674,6 +674,7 @@ public class BenchmarkOperatorView extends ViewPart {
 					}
 				}
 				ecItem.calcSummation();
+				ecItem.getResult().updateMax(eprof.max_total_process);
 			}
 		}
 		
