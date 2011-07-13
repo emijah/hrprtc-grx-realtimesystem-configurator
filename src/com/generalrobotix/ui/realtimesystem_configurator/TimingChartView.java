@@ -21,6 +21,8 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.axis.StandardTickUnitSource;
+import org.jfree.chart.axis.TickUnitSource;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
@@ -40,7 +42,7 @@ public class TimingChartView extends ViewPart
 	private static TimingChartView this_;
 	private RTSystemItem selectedItem_;
 	
-	private static final int INITIAL_CHART_NUM = 3;
+	private static final int INITIAL_CHART_NUM = 2;
 	private static final String XAXIS_LABEL = "Time[msec]";
 	private static final int LAST_PERIOD  = 0;
 	private static final int SHOW_WORST   = 1;
@@ -273,15 +275,6 @@ public class TimingChartView extends ViewPart
 		chart.setBackgroundPaint(isSelected ? Color.yellow : Color.white);
 		chart.setTitle("EC : "+item.getName());
 		
-		float dash[] = {10.0f, 3.0f};
-		BasicStroke dashStroke = new BasicStroke(5.0f, 
-                BasicStroke.CAP_BUTT, 
-                BasicStroke.JOIN_MITER, 
-                3.0f,
-                dash,
-                0.0f);
-		chart.setBorderStroke(dashStroke);
-		
 		XYSeriesCollection dataset = new XYSeriesCollection();
 		dataset.addSeries(new XYSeries("cycle"));
 		chart.getXYPlot().setDataset(dataset);
@@ -365,7 +358,8 @@ public class TimingChartView extends ViewPart
 				upStateValue -= 1;
 			}
 		}
-		
+		chart.getXYPlot().setDomainGridlinesVisible(false);
+	
 		parent.update();
 	}
 	

@@ -142,8 +142,8 @@ public class BenchmarkResultItem extends TreeModelItem
 		if ( result.date != null && ( date == null || result.date.after(date)) ) {
 			date = result.date;
 		}
-		max  += result.max;
-		min  += result.min;
+		//max  += result.max;
+		//min  += result.min;
 		mean += result.mean;
 		updateProperties();
 	}
