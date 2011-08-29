@@ -195,6 +195,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	        	if (sourcepart != BenchmarkOperatorView.this && selection instanceof IStructuredSelection) {
 	        		List<?> sel = ((IStructuredSelection) selection).toList();
 	        		if ( sel.size() > 0 ) {
+	        			btnUpdate.setSelection(false);
 	        			currentSystem = null;
 	        			TreeModelItem item = (TreeModelItem) sel.get(0);
 	        			List<TreeModelItem> children = item.getChildren();
@@ -556,10 +557,10 @@ public class BenchmarkOperatorView extends ViewPart {
 	{
 		public void run() {
 			try {
-				updateLogAction();
 				Display display = Display.getCurrent();
 				if ( !display.isDisposed() && btnUpdate.getSelection() ) {
 					display.timerExec(loggingInterval_, this);
+					updateLogAction();
 				}
 			} catch (Exception ex) {
 				ex.printStackTrace();
