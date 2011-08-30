@@ -77,7 +77,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 	private static final SimpleDateFormat FORMAT_DATE2 = new SimpleDateFormat("yyyyMMddHHmmss");
 	
-	private int robotPort_ = 2809;
+	//private int robotPort_ = 2809;
 	private int managerPort_ = 2810;
 	private int loggingInterval_ = DEFAULT_LOGGING_INTERVAL;
 	

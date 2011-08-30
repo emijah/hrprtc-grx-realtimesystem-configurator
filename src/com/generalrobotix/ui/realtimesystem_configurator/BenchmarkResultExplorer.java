@@ -45,7 +45,6 @@ import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Menu;
 import org.eclipse.swt.widgets.Tree;
 import org.eclipse.ui.PartInitException;
@@ -66,11 +65,7 @@ public class BenchmarkResultExplorer extends ViewPart
 	private TreeModelItem rootItem = new TreeModelItem();
 	private TreeViewer resultViewer;
 	private NullProgressMonitor progress;
-	private FileDialog fdlg;
 	private List<Action> actionList = new ArrayList<Action>();
-	private LoadAction actLoad_;
-	private OpenAction actOpen_;
-	private DeleteAction actDelete_;
 	private static BenchmarkResultExplorer this_;
 
 	private static final String REALTIME_SYSTEM_PROJECT_NAME = "RealtimeSystemProjects";
@@ -90,30 +85,19 @@ public class BenchmarkResultExplorer extends ViewPart
 	{
 		parent.setLayout(new GridLayout(1, false));
 		
-		fdlg = new FileDialog(parent.getShell(), SWT.OPEN);
-		
 		resultViewer = setupTreeViewer(parent);
 		getSite().setSelectionProvider(resultViewer);
 		Transfer[] transfers = new Transfer[] { org.eclipse.swt.dnd.FileTransfer.getInstance() };
 		resultViewer.addDropSupport(DND.DROP_COPY | DND.DROP_MOVE, transfers, new MyViewerDropListener(resultViewer));
 		
-		actionList.add(new ImportAction());
-		actLoad_ = new LoadAction();
-		actOpen_ = new OpenAction();
-		actDelete_ = new DeleteAction();
+		actionList.add(new OpenAction());
 
 		MenuManager menuManager = new MenuManager("#PopupMenu");
 		menuManager.setRemoveAllWhenShown(true);
 		menuManager.addMenuListener(new IMenuListener() {
 			public void menuAboutToShow(IMenuManager manager) 
 			{
-				manager.add(actLoad_);
-				manager.add(actDelete_);
-				manager.add(actOpen_);
-				//Iterator<Action> it = actionList.iterator();
-				//while (it.hasNext()) {
-					//manager.add(it.next());
-				//}
+				manager.add(new DeleteAction());
 			}
 		});
 		Menu menu = menuManager.createContextMenu(resultViewer.getControl());
@@ -220,103 +204,15 @@ public class BenchmarkResultExplorer extends ViewPart
 		resultViewer.refresh();
 	}
 	
-	private boolean loadResult(TreeModelItem item)
-	{
-		if ( !item.getParent().getName().equals("ResultRoot") ) {
-			return false;
-		}
-		
-		RTSystemItem system = null;
-        Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
-        while ( it.hasNext() ) {
-        	TreeModelItem i = it.next();
-      		if ( i instanceof RTSystemItem ) {
-      			system = (RTSystemItem)i;
-      			break;
-      		}
-      	}
-      	if ( system == null) {
-      		return false;
-        }
-               
-      	String filename = item.getName();
-		// load result
-		try {
-			IFolder folder = project.getFolder("results");
-			if ( folder.findMember(filename, false) != null ) {
-				IFile file = folder.getFile(filename);
-				Map<String, BenchmarkResultItem> ret = fromYaml(file);
-				if ( ret != null ) {
-					Iterator<RTComponentItem> rtcs = system.getRTCMembers().iterator();
-					while(rtcs.hasNext()) {
-						RTComponentItem rtc = rtcs.next();
-						rtc.setResult(ret.get(rtc.getId()));
-						double cycle = 1.0/rtc.getComponent().getExecutionContexts().get(0).getRate();
-						rtc.getResult().setCycle(cycle);
-					}
-				}
-			}
-		} catch (Exception e) {
-			System.out.println("Exception occured during loading log file.");
-			return false;
-		}
-		// calculate summation
-		Iterator<RTComponentItem> rtcs = system.getRTCMembers().iterator();
-		while ( rtcs.hasNext() ) {
-			RTComponentItem model = rtcs.next();
-			if ( model instanceof ExecutionContextItem ) {
-				((ExecutionContextItem)model).calcSummation();
-			}
-		}
-		return true;
-	}
-	
-	private class ImportAction extends Action
-	{
-		public ImportAction()
-		{
-			setText("Import RTSystem Profile");
-			setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/folder_open.png"));
-		}
-		
-		public void run()
-		{
-			fdlg.setFilterExtensions( new String[] {"*.xml"} );
-			fdlg.open();
-			String fname = fdlg.getFilterPath() + java.io.File.separator + fdlg.getFileName();
-			if ( fname != null ) {
-				importProfile(fname);
-			}
-		}
-	};
-	
-	private class LoadAction extends Action
-	{
-		public LoadAction()
-		{
-			setText("Load result");
-			setImageDescriptor(AbstractUIPlugin.imageDescriptorFromPlugin(getSite().getPluginId(), "icons/folder_open.png"));
-		}
-		
-		public void run()
-		{
-			resultViewer.getSelection();
-            TreeModelItem item = (TreeModelItem)((TreeSelection)resultViewer.getSelection()).getFirstElement();
-           	if ( loadResult(item) ) {
-          		resultViewer.setSelection(new StructuredSelection(item));
-           	}
-		}
-	};
-	
 	private class OpenAction extends Action
 	{
 		public OpenAction()
 		{
-			setText("Open with SystemEditor");
+			setText("Open SystemEditor");
 		}
 		public void run()
 		{
-            TreeModelItem item = (TreeModelItem)((TreeSelection)resultViewer.getSelection()).getFirstElement();
+            //TreeModelItem item = (TreeModelItem)((TreeSelection)resultViewer.getSelection()).getFirstElement();
             IFile f = getProject().getFile("/tmp/test2.xml");
             try {
 				getSite().getPage().openEditor(new FileEditorInput(f), "jp.go.aist.rtm.systemeditor.ui.editor.SystemDiagramEditor");
