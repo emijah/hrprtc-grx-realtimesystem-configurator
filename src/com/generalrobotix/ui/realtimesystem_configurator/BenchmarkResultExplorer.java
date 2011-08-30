@@ -191,17 +191,18 @@ public class BenchmarkResultExplorer extends ViewPart
 	    				Map<String, BenchmarkResultItem> ret = fromYaml(file);
 	    				if ( ret != null ) {
 	    					for(Entry<String, BenchmarkResultItem> e : ret.entrySet()) {
+	    						if ( e.getValue().date == null ) 
+	    							continue;	    						 
+	    						 
 	    						RTComponentItem rtcItem = null;
-	    						if ( e.getKey().startsWith("EC:") ) {
-		    	        			ecItem.ec.setRate(1/e.getValue().cycle);
-		    	        			rtcItem = ecItem;
-	    						} else	if (e.getValue().lastLog_.size() > 0) {
-		    						rtcItem = new RTComponentItem(currentSystem);	
-		    						ecItem.add(rtcItem);
-		    						currentSystem.members.add(rtcItem);
-	    						} else {
-	    							continue;
-	    						}
+    							if ( e.getKey().startsWith("EC:") ) {
+    								ecItem.ec.setRate(1/e.getValue().cycle);
+    								rtcItem = ecItem;
+    							} else	if (e.getValue().lastLog_.size() > 0) {
+    								rtcItem = new RTComponentItem(currentSystem);	
+    								ecItem.add(rtcItem);
+    								currentSystem.members.add(rtcItem);
+    							}     						   				
 	    						
 	    						rtcItem.setName(e.getKey());
 								rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
