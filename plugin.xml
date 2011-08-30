@@ -21,11 +21,6 @@
             id="com.generalrobotix.ui.realtimesystem_configurator.timingchartview"
             name="Timing Chart"/>
       <view
-            class="com.generalrobotix.ui.realtimesystem_configurator.RTSystemTopologyView"
-            icon="icons/grxTopology.png"
-            id="com.generalrobotix.ui.realtimesystem_configurator.topologyview"
-            name="RTSysytem Topology"/>
-      <view
             class="com.generalrobotix.ui.realtimesystem_configurator.BenchmarkOperatorView"
             icon="icons/grxBenchMarkOperator.png"
             id="com.generalrobotix.ui.realtimesystem_configurator.benchmarkoperator"
