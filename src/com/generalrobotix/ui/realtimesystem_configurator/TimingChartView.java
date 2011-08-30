@@ -1,6 +1,5 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
-import java.awt.BasicStroke;
 import java.awt.Color;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -13,7 +12,6 @@ import org.eclipse.swt.SWT;
 import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.Composite;
-import org.eclipse.swt.widgets.Text;
 import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
@@ -21,8 +19,6 @@ import org.eclipse.ui.plugin.AbstractUIPlugin;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
-import org.jfree.chart.axis.StandardTickUnitSource;
-import org.jfree.chart.axis.TickUnitSource;
 import org.jfree.chart.axis.ValueAxis;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
@@ -89,11 +85,14 @@ public class TimingChartView extends ViewPart
 					List<?> sel = ((IStructuredSelection) selection).toList();
 	        		if ( sel.size() > 0 && sel.get(0) instanceof TreeModelItem ) {
 	        			TreeModelItem item = (TreeModelItem) sel.get(0);
-	        			List<TreeModelItem> children = item.getChildren();
-	        			if ( children.size() > 0 && children.get(0) instanceof RTSystemItem ) {
-	        				selectedItem_ = (RTSystemItem)children.get(0);
+	        			//List<TreeModelItem> children = item.getChildren();
+	        			//if ( children.size() > 0 && children.get(0) instanceof RTSystemItem ) {
+	        			if ( item instanceof RTSystemItem ) {
+	        			    //selectedItem_ = (RTSystemItem)children.get(0);
+	        				selectedItem_ = (RTSystemItem)item;
 	        				updateCharts(selectedItem_);
-	        			} else {
+	        			}/* else {
+	        				//Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
 	        				Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
 	        				while( it.hasNext() ) {
 	        					TreeModelItem m = it.next();
@@ -103,7 +102,7 @@ public class TimingChartView extends ViewPart
 	        						break;
 	        					}
 	        				}
-	        			}
+	        			}*/
 	        		}
 				}
 			}
@@ -172,7 +171,8 @@ public class TimingChartView extends ViewPart
 		{
 			public void run()
 			{
-				changeShowMode();
+				if ( selectedItem_ != null)
+					changeShowMode();
 			}
 		};
 		getViewSite().getActionBars().getToolBarManager().add(actChangeMode);
@@ -235,6 +235,7 @@ public class TimingChartView extends ViewPart
 	
 	synchronized public void updateCharts(RTSystemItem system)
 	{
+		try {
 		Iterator<ExecutionContextItem> checkedItems = system.getExecutionContexts().iterator();
 		int index = 0;
 		isOffsetUpdated = false;
@@ -244,6 +245,9 @@ public class TimingChartView extends ViewPart
 			updateChart((ExecutionContextItem)item, index++, false);
 		}
 		updateChart(null, index, false);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
 	}
 	
 	private void updateChart(ExecutionContextItem item, int index, boolean isSelected)
@@ -314,7 +318,7 @@ public class TimingChartView extends ViewPart
 				dataset.addSeries(xyseries);
 				downStateValue -= 1;
 				upStateValue -= 1;
-			}
+			} 
 		} else {
 			double t1 = 0;
 			while ( rtcs.hasNext() ) {

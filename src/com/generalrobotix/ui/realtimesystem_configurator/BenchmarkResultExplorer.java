@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
@@ -32,8 +33,10 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
+import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
+import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -173,10 +176,45 @@ public class BenchmarkResultExplorer extends ViewPart
 			IResource[] members = folder.members();
 			for (int j=0; j<members.length; j++ ) {
 				if ( members[j].getType() == IResource.FILE && members[j].getName().endsWith(".yaml") ) {
-					TreeModelItem item = new TreeModelItem(members[j].getName());
+					RTSystemItem item = new RTSystemItem();
+					item.setName(members[j].getName());
 					item.setPropertyValue("resource", members[j]);
 					rootItem.add(item);
 					members[j].refreshLocal(1, progress);
+					
+	    			RTSystemItem currentSystem = item;//(RTSystemItem)event.getSelection();
+	    			ExecutionContextItem ecItem = new ExecutionContextItem(currentSystem);
+					ecItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+					currentSystem.members.add(ecItem);
+					currentSystem.eclist.add(ecItem);
+					currentSystem.add(ecItem);
+
+	    			String filename = currentSystem.getName();
+	    			//IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder("results");
+	    			if ( folder.findMember(filename, false) != null ) {
+	    				IFile file = folder.getFile(filename);
+	    				Map<String, BenchmarkResultItem> ret = fromYaml(file);
+	    				if ( ret != null ) {
+	    					for(Entry<String, BenchmarkResultItem> e : ret.entrySet()) {
+	    						RTComponentItem rtcItem = null;
+	    						if ( e.getKey().startsWith("EC:") ) {
+		    	        			ecItem.ec.setRate(1/e.getValue().cycle);
+		    	        			rtcItem = ecItem;
+	    						} else	if (e.getValue().lastLog_.size() > 0) {
+		    						rtcItem = new RTComponentItem(currentSystem);	
+		    						ecItem.add(rtcItem);
+		    						currentSystem.members.add(rtcItem);
+	    						} else {
+	    							continue;
+	    						}
+	    						
+	    						rtcItem.setName(e.getKey());
+								rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+	    						rtcItem.setResult(e.getValue());
+	    					}
+	    				}
+	    			}
+	    			//ecItem.calcSummation();
 				}
 			}
 			folder.refreshLocal(2, progress);
@@ -220,7 +258,7 @@ public class BenchmarkResultExplorer extends ViewPart
 			}
 		}*/
 		resultViewer.refresh();
-		resultViewer.expandAll();
+		//resultViewer.expandAll();
 	}
 	
 	private boolean loadResult(TreeModelItem item)
@@ -460,6 +498,48 @@ public class BenchmarkResultExplorer extends ViewPart
                 //}
             }
         });
+        /*
+        viewer.addSelectionChangedListener(new ISelectionChangedListener()
+        {
+			@Override
+			public void selectionChanged(SelectionChangedEvent event) {
+				if  ( ! (event.getSelection() instanceof RTSystemItem) )
+					return;
+				
+    			RTSystemItem currentSystem = (RTSystemItem)event.getSelection();
+    			ExecutionContextItem ecItem = new ExecutionContextItem(currentSystem);
+				ecItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+				currentSystem.members.add(ecItem);
+				currentSystem.eclist.add(ecItem);
+				currentSystem.add(ecItem);
+
+    			String filename = currentSystem.getName();
+    			IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder("results");
+    			if ( folder.findMember(filename, false) != null ) {
+    				IFile file = folder.getFile(filename);
+    				Map<String, BenchmarkResultItem> ret = fromYaml(file);
+    				if ( ret != null ) {
+    					for(Entry<String, BenchmarkResultItem> e : ret.entrySet()) {
+    						try {
+    						RTComponentItem rtcItem = new RTComponentItem(currentSystem);
+    						
+    	        			ecItem.setName(e.getKey());// TODO check ecowner
+    	        			ecItem.getResult().setCycle(e.getValue().cycle);
+    	        			
+    						rtcItem.setName(e.getKey());
+							rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+    						rtcItem.setResult(e.getValue());
+    						currentSystem.members.add(rtcItem);
+    						ecItem.add(rtcItem);
+    						} catch (Exception ex){
+    							ex.printStackTrace();
+    						}
+    					}
+    				}
+    			}
+    			ecItem.calcSummation();
+			}
+        });*/
 
 		Tree tree = viewer.getTree();
 		tree.setLayoutData(new GridData(GridData.FILL_BOTH));

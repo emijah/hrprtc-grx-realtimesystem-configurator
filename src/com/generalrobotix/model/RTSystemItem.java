@@ -178,7 +178,11 @@ public class RTSystemItem extends TreeModelItem
 		Iterator<RTComponentItem> rtcs = getRTCMembers().iterator();
 		while (rtcs.hasNext()) {
 			RTComponentItem rtc = rtcs.next();
-			resultMap.put(rtc.getName()/*rtc.getId()*/, rtc.getResult());
+			String id = rtc.getName();
+			if ( rtc instanceof ExecutionContextItem )
+				id = "EC:"+id;
+			System.out.println(id);
+			resultMap.put(id, rtc.getResult());
 		}
 		String result = Yaml.dump(resultMap);
 		return result;

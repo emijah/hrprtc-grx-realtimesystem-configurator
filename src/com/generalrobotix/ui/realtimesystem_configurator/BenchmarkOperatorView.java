@@ -1,11 +1,6 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -14,14 +9,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.NullProgressMonitor;
-import org.eclipse.jface.action.Action;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ISelection;
 import org.eclipse.jface.viewers.IStructuredSelection;
@@ -51,16 +43,10 @@ import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
-import org.ho.yaml.Yaml;
 import org.omg.CosNaming.NamingContext;
-import org.openrtp.namespaces.rts.version02.DataportConnector;
-import org.openrtp.namespaces.rts.version02.TargetPort;
 
 import RTC.ComponentProfile;
-import RTC.ConnectorProfile;
-import RTC.ConnectorProfileHolder;
 import RTC.ExecutionContext;
-import RTC.PortService;
 import RTC.RTObject;
 import RTM.Manager;
 
@@ -74,7 +60,6 @@ import com.generalrobotix.ui.util.GrxRTMUtil;
 public class BenchmarkOperatorView extends ViewPart {
 	private RTSystemItem onlineSystem;
 	private RTSystemItem currentSystem;
-	private TreeModelItem currentItem;
 	private List<RTC.ExecutionContext> onlineEcList;
 	private TreeViewer rtsViewer;
 	private Button btnUpdate;
@@ -118,19 +103,7 @@ public class BenchmarkOperatorView extends ViewPart {
 		
 		Composite btnPanel = new Composite(parent, SWT.NONE);
 		btnPanel.setLayout(new RowLayout());
-/*		Button btnStartup = new Button(btnPanel, SWT.NONE);
-		btnStartup.setText("Startup System");
-		btnStartup.addSelectionListener(new SelectionListener() {
-			public void widgetDefaultSelected(SelectionEvent e) {}
 
-			public void widgetSelected(SelectionEvent e)
-			{
-				setupRTSystem();
-				checkState();
-				rtsViewer.refresh();
-			}	
-		});
-*/		
 		final Button btnReset = new Button(btnPanel, SWT.NONE);
 		btnReset.setText("Reset Log");
 		btnReset.addSelectionListener(new SelectionListener() {
@@ -206,71 +179,12 @@ public class BenchmarkOperatorView extends ViewPart {
 	        {
 	        	if (sourcepart != BenchmarkOperatorView.this && selection instanceof IStructuredSelection) {
 	        		List<?> sel = ((IStructuredSelection) selection).toList();
-	        		if ( sel.size() > 0 ) {
+	        		if ( sel.size() > 0 && sel.get(0) instanceof RTSystemItem) {
 	        			btnUpdate.setSelection(false);
-	        
-	        			currentSystem = new RTSystemItem();
-	        			ExecutionContextItem ecItem = new ExecutionContextItem(currentSystem);
-						ecItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
-						currentSystem.members.add(ecItem);
-						currentSystem.eclist.add(ecItem);
-						currentSystem.add(ecItem);
- 
-	        			String filename = ((TreeModelItem) sel.get(0)).getName();
-	        			IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder("results");
-	        			if ( folder.findMember(filename, false) != null ) {
-	        				IFile file = folder.getFile(filename);
-	        				Map<String, BenchmarkResultItem> ret = fromYaml(file);
-	        				if ( ret != null ) {
-	        					for(Entry<String, BenchmarkResultItem> e : ret.entrySet()) {
-	        						try {
-	        						RTComponentItem rtcItem = new RTComponentItem(currentSystem);
-	        						
-	        	        			ecItem.setName(e.getKey());// TODO check ecowner
-	        	        			ecItem.getResult().setCycle(e.getValue().cycle);
-	        	        			
-	        						rtcItem.setName(e.getKey());
-	    							rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
-	        						rtcItem.setResult(e.getValue());
-	        						currentSystem.members.add(rtcItem);
-	        						ecItem.add(rtcItem);
-	        						} catch (Exception ex){
-	        							ex.printStackTrace();
-	        						}
-	        					}
-
-	        					/*	        					
-	        					 Iterator<RTComponentItem> rtcs = currentSystem.getRTCMembers().iterator();
-	        					 while(rtcs.hasNext()) {
-	        						RTComponentItem rtc = rtcs.next();
-	        						rtc.setResult(ret.get(rtc.getId()));
-	        						double cycle = 1.0/rtc.getComponent().getExecutionContexts().get(0).getRate();
-	        						rtc.getResult().setCycle(cycle);
-	        					}
-	        					*/
-	        				}
-	        			}
-	        			ecItem.calcSummation();
-	        			/*
-	        			TreeModelItem item = (TreeModelItem) sel.get(0);
-	        			List<TreeModelItem> children = item.getChildren();
-	        			if ( children.size() > 0 && children.get(0) instanceof RTSystemItem ) {
-	        				currentSystem = (RTSystemItem)children.get(0);
-	        			} else {
-	        				Iterator<TreeModelItem> it = item.getParent().getParent().getChildren().iterator();
-	        				while( it.hasNext() ) {
-	        					TreeModelItem m = it.next();
-	        					if ( m instanceof RTSystemItem ) {
-	        						currentSystem = (RTSystemItem)m;
-	        						break;
-	        					}
-	        				}
-	        			}*/
-	        			//if ( currentSystem != null ) {
-	        				rtsViewer.setInput(currentSystem);
-	        				text.setText(filename);
-	        				rtsViewer.expandAll();
-	        			//}
+	        			currentSystem = (RTSystemItem)sel.get(0);
+	        			rtsViewer.setInput(currentSystem);
+	        			text.setText(currentSystem.getName());
+	        			rtsViewer.expandAll();
 	        		}
 	            }
 	        }
@@ -279,30 +193,6 @@ public class BenchmarkOperatorView extends ViewPart {
 		getSite().setSelectionProvider(rtsViewer);
 	}
 	
-    private Map<String, BenchmarkResultItem> fromYaml(IFile file)
-    {
-    	if ( file == null || !file.exists() || file.isPhantom() ) {
-    		return null;
-    	}
-    	Reader reader = null;
-        try {
-            reader = new BufferedReader(new InputStreamReader(file.getContents(), "UTF-8"));
-            Object yaml = Yaml.load(reader);
-            return (Map<String, BenchmarkResultItem>)yaml;
-        } catch (UnsupportedEncodingException e) {
-			e.printStackTrace();
-		} catch (CoreException e) {
-			e.printStackTrace();
-		} finally {
-        	try {
-				reader.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-        }
-        return null;
-    }
-
 	@Override
 	public void setFocus()
 	{
@@ -466,118 +356,8 @@ public class BenchmarkOperatorView extends ViewPart {
 		column.setText(text);
 	}
 	
-	private void setupRTSystem()
-	{
-		if ( currentSystem != null ) {
-			try {
-				System.out.println("creating components");
-				String hostName = cmbRobotHost_.getText();
-				NamingContext rnc = GrxRTMUtil.getRootNamingContext(hostName, robotPort_);
-				Manager mgr = GrxRTMUtil.findRTCmanager(hostName, managerPort_);
-				if ( mgr == null ) {
-					System.out.println("cant find rtc manager on "+hostName + "("+ robotPort_ + ")");
-				}
-				
-				// Create Components
-				Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
-				while ( it.hasNext() ) {
-					RTComponentItem model = it.next();
-					if ( GrxRTMUtil.findRTC(model.getName(), rnc) == null ) {
-						if ( createComp(model, mgr) != null ) {
-							System.out.print(" created:");
-							model.setState(RTComponentItem.RTC_SLEEP);
-						} else {
-							System.out.print(" failed:");
-							model.setState(RTComponentItem.RTC_NOT_EXIST);
-						}
-					} else {
-						model.setState(RTComponentItem.RTC_SLEEP);
-						System.out.print("exist:");
-					}
-					System.out.println(model.getName() + " on " + hostName + " ...");
-				}
-				System.out.println("\nconnecting components");
-				
-				// Connect Data ports
-				Iterator<DataportConnector> connectors = currentSystem.getDataPortConnectors().iterator();
-				while ( connectors.hasNext() ) {
-					DataportConnector con = connectors.next();
-					TargetPort src = con.getSourceDataPort();
-					TargetPort dst = con.getTargetDataPort();
-					RTObject srcObj = GrxRTMUtil.findRTC(src.getInstanceName(), rnc);
-					RTObject dstObj = GrxRTMUtil.findRTC(dst.getInstanceName(), rnc);
-					PortService srcPort = GrxRTMUtil.findPort(srcObj, src.getPortName());
-					PortService dstPort = GrxRTMUtil.findPort(dstObj, dst.getPortName());
-					ConnectorProfileHolder con_prof = new ConnectorProfileHolder();
-					con_prof.value = new ConnectorProfile();
-					con_prof.value.name = "connector0";
-					con_prof.value.connector_id = "";
-					con_prof.value.ports = new PortService[]{srcPort, dstPort};
-					con_prof.value.properties = new _SDOPackage.NameValue[]{
-							GrxRTMUtil.createNameValue("dataport.interface_type", "corba_cdr"),
-							GrxRTMUtil.createNameValue("dataport.dataflow_type","Push"),
-							GrxRTMUtil.createNameValue("dataport.subscription_type","flush")};
-					srcPort.connect(con_prof);
-					System.out.println("connect: " + src.getPortName() + " to " + dst.getPortName());
-				}
-				
-				System.out.println("\nactivating components");
-				// Serialize and Activate Components
-				Iterator<ExecutionContextItem> ecs = currentSystem.getExecutionContexts().iterator();
-				while ( ecs.hasNext() ) {
-					ExecutionContextItem ec = ecs.next();
-					List<RTObject> rtcs = new ArrayList<RTObject>();
-					Iterator<TreeModelItem> children = ec.getChildren().iterator();
-					while ( children.hasNext() ) {
-						TreeModelItem item = children.next();
-						if ( item instanceof RTComponentItem ) {
-							RTObject r = GrxRTMUtil.findRTC(((RTComponentItem)item).getComponent().getInstanceName(), rnc);
-							if ( r != null ) {
-								rtcs.add(r);
-							} 
-						}
-					}
-					GrxRTMUtil.serializeComponents(rtcs);
-					ec.setState(RTComponentItem.RTC_SLEEP);
-					GrxRTMUtil.activateComponents(rtcs);
-					ec.setState(RTComponentItem.RTC_ACTIVE);
-				}
-				
-				System.out.println("\nInitialized successfully");
-				
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		}
-	}
-	
-	private RTObject createComp(RTComponentItem model, Manager mgr)
-	{
-		RTObject ret = null;
-		try {
-			String category = model.getId().split(":")[0];
-			if ( category.equals("RTC") ) {
-				model.getName();
-				String[] s = model.getId().split(":")[1].split("[.]");
-				String loadable = s[s.length-1];
-				ret = mgr.create_component(loadable);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-			GrxRTMUtil.releaseObject(mgr);
-		}
-		
-		return ret;
-	}
-	
 	private void resetLogAction() 
 	{
-		/*if ( currentSystem != null ) {
-			Iterator<RTComponentItem> it = currentSystem.getRTCMembers().iterator();
-			while ( it.hasNext() ) {
-				it.next().getResult().reset();
-			}
-		}*/
 		onlineSystem = null;
 	}
 	
@@ -802,28 +582,4 @@ public class BenchmarkOperatorView extends ViewPart {
 			e.printStackTrace();
 		}
 	}
-	
-	/*
-	private void execPython(String pythonPath, String moduleName, List<String> args)
-	{
-		try {
-			args.add(0, moduleName);
-			args.add(0, "-m");
-			args.add(0, "python");
-			String[] props = new String[]{"PYTHONPATH=" + pythonPath};
-			Process p = Runtime.getRuntime().exec(args.toArray(new String[0]), props);
-			BufferedReader stdout = new BufferedReader(new InputStreamReader(p.getInputStream()));
-			BufferedReader stderr = new BufferedReader(new InputStreamReader(p.getErrorStream()));
-			//PrintStream ps = new PrintStream(p.getOutputStream());
-			while ( stdout.ready() ) {
-				System.out.println(stdout.readLine());
-			}
-			while ( stderr.ready() ) {
-				System.out.println(stdout.readLine());
-			}
-		} catch (IOException e1) {
-			e1.printStackTrace();
-		}
-	}
-	*/
 }
