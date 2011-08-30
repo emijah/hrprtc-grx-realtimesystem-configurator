@@ -43,7 +43,6 @@ import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
-import org.omg.CosNaming.NamingContext;
 
 import RTC.ComponentProfile;
 import RTC.ExecutionContext;
@@ -361,57 +360,6 @@ public class BenchmarkOperatorView extends ViewPart {
 		onlineSystem = null;
 	}
 	
-	private void checkState()
-	{
-		if ( currentSystem != null ) {
-			NamingContext rnc = GrxRTMUtil.getRootNamingContext(cmbRobotHost_.getText(), robotPort_);
-			Iterator<ExecutionContextItem> ecs = currentSystem.getExecutionContexts().iterator();
-			//RTM.Manager mgr = GrxRTMUtil.findRTCmanager(cmbRobotHost_.getText(), managerPort_);
-			// TODO check manager and monitor
-			while ( ecs.hasNext() ) {
-				ExecutionContextItem ec = ecs.next();
-				RTObject ecOwner = null;
-				OpenHRP.ExecutionProfileService bmSVC =  null;
-				try {
-					ec.setState(RTComponentItem.RTC_NOT_EXIST);
-					ecOwner = GrxRTMUtil.findRTC(ec.getOwnerName(), rnc);
-					if ( ecOwner != null ) {
-						ec.setState(RTComponentItem.RTC_SLEEP);
-						bmSVC = OpenHRP.ExecutionProfileServiceHelper.narrow(ecOwner.get_owned_contexts()[0]);
-						if ( bmSVC != null ) {
-							ec.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
-						}
-					}
-				} catch (Exception e) {
-					e.printStackTrace();
-				} finally {
-					if ( ecOwner != null) {
-						ecOwner._release();
-					}
-					if ( bmSVC != null ) {
-						bmSVC._release();
-					}
-				}
-				Iterator<TreeModelItem> items = ec.getChildren().iterator();
-				while ( items.hasNext() ) {
-					RTComponentItem rtcItem = (RTComponentItem)items.next();
-					rtcItem.setState(RTComponentItem.RTC_NOT_EXIST);
-					RTObject rtc = GrxRTMUtil.findRTC(rtcItem.getName(), rnc);
-					if ( rtc != null ) {
-						rtcItem.setState(RTComponentItem.RTC_SLEEP);
-						if ( rtc.is_alive(ecOwner.get_owned_contexts()[0]) ) {
-							if ( bmSVC == null ) {
-								rtcItem.setState(RTComponentItem.RTC_ACTIVE);
-							} else {
-								rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-	
 	public class UpdateLogThread implements Runnable
 	{
 		public void run() {
@@ -557,7 +505,6 @@ public class BenchmarkOperatorView extends ViewPart {
 	
 	private void save()
 	{
-		//IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder(currentSystem.getId()+"/results");
 		IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder("results");
 		if ( !folder.exists() ) {
 			try {
@@ -573,7 +520,6 @@ public class BenchmarkOperatorView extends ViewPart {
 			}
 			file.setContents(new ByteArrayInputStream(currentSystem.toYaml().getBytes("UTF-8")), true, false, null);
 			BenchmarkResultExplorer.getInstance().updateList();
-			checkState();
 		} catch (UnsupportedEncodingException e) {
 			e.printStackTrace();
 		} catch (CoreException e) {

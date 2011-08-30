@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -174,14 +175,13 @@ public class RTSystemItem extends TreeModelItem
 	
 	public String toYaml()
 	{
-		Map<String, BenchmarkResultItem> resultMap = new HashMap<String, BenchmarkResultItem>();
+		Map<String, BenchmarkResultItem> resultMap = new LinkedHashMap<String, BenchmarkResultItem>();
 		Iterator<RTComponentItem> rtcs = getRTCMembers().iterator();
 		while (rtcs.hasNext()) {
 			RTComponentItem rtc = rtcs.next();
 			String id = rtc.getName();
 			if ( rtc instanceof ExecutionContextItem )
 				id = "EC:"+id;
-			System.out.println(id);
 			resultMap.put(id, rtc.getResult());
 		}
 		String result = Yaml.dump(resultMap);
