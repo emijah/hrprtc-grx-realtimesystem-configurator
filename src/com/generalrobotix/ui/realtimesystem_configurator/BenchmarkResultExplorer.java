@@ -4,13 +4,11 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.nio.channels.FileChannel;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -33,10 +31,8 @@ import org.eclipse.jface.action.MenuManager;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.DoubleClickEvent;
 import org.eclipse.jface.viewers.IDoubleClickListener;
-import org.eclipse.jface.viewers.ISelectionChangedListener;
 import org.eclipse.jface.viewers.ITreeContentProvider;
 import org.eclipse.jface.viewers.LabelProvider;
-import org.eclipse.jface.viewers.SelectionChangedEvent;
 import org.eclipse.jface.viewers.StructuredSelection;
 import org.eclipse.jface.viewers.TreeSelection;
 import org.eclipse.jface.viewers.TreeViewer;
@@ -77,7 +73,6 @@ public class BenchmarkResultExplorer extends ViewPart
 	private DeleteAction actDelete_;
 	private static BenchmarkResultExplorer this_;
 
-	private static final SimpleDateFormat FORMAT_DATE1 = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
 	private static final String REALTIME_SYSTEM_PROJECT_NAME = "RealtimeSystemProjects";
 
 	public BenchmarkResultExplorer() 
@@ -214,51 +209,14 @@ public class BenchmarkResultExplorer extends ViewPart
 	    					}
 	    				}
 	    			}
-	    			//ecItem.calcSummation();
 				}
 			}
 			folder.refreshLocal(2, progress);
 		} catch (CoreException e) {
 			e.printStackTrace();
 		}
-		/*
-		File[] files = project.getLocation().toFile().listFiles();
-		for (int i=0; files != null && i<files.length; i++) {
-			if ( files[i].isDirectory() ) {
-				File[] systemprofiles = files[i].listFiles(new FilenameFilter(){
-					public boolean accept(File file, String name)
-					{
-						return ( name.endsWith(".yaml") );
-					}
-				});
-				
-				if ( systemprofiles.length > 0 ) {
-					//RTSystemItem system = new RTSystemItem(systemprofiles[0].getAbsolutePath());
-					//TreeModelItem systemRoot = new TreeModelItem(system.getId());
-					//systemRoot.add(system);
-					//TreeModelItem resultRoot = new TreeModelItem("ResultRoot");
-					//systemRoot.add(resultRoot);
-					//rootItem.add(systemRoot);
-					//rootItem.add(resultRoot);
-					IFolder folder = project.getFolder("results");
-					try {
-						IResource[] members = folder.members();
-						for (int j=0; j<members.length; j++ ) {
-							if ( members[j].getType() == IResource.FILE && members[j].getName().endsWith(".yaml") ) {
-								TreeModelItem item = new TreeModelItem(members[j].getName());
-								item.setPropertyValue("resource", members[j]);
-								rootItem.add(item);
-							}
-						}
-					} catch (CoreException e) {
-						e.printStackTrace();
-					}
-					
-				}
-			}
-		}*/
+
 		resultViewer.refresh();
-		//resultViewer.expandAll();
 	}
 	
 	private boolean loadResult(TreeModelItem item)
@@ -491,55 +449,9 @@ public class BenchmarkResultExplorer extends ViewPart
             public void doubleClick(DoubleClickEvent event)
             {
                 TreeModelItem item = (TreeModelItem)((TreeSelection)event.getSelection()).getFirstElement();
-                //if ( item.getParent() == rootItem ) {
-                	
-                //} else if ( loadResult(item) ) {
-          			resultViewer.setSelection(new StructuredSelection(item));
-                //}
+          		resultViewer.setSelection(new StructuredSelection(item));
             }
         });
-        /*
-        viewer.addSelectionChangedListener(new ISelectionChangedListener()
-        {
-			@Override
-			public void selectionChanged(SelectionChangedEvent event) {
-				if  ( ! (event.getSelection() instanceof RTSystemItem) )
-					return;
-				
-    			RTSystemItem currentSystem = (RTSystemItem)event.getSelection();
-    			ExecutionContextItem ecItem = new ExecutionContextItem(currentSystem);
-				ecItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
-				currentSystem.members.add(ecItem);
-				currentSystem.eclist.add(ecItem);
-				currentSystem.add(ecItem);
-
-    			String filename = currentSystem.getName();
-    			IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder("results");
-    			if ( folder.findMember(filename, false) != null ) {
-    				IFile file = folder.getFile(filename);
-    				Map<String, BenchmarkResultItem> ret = fromYaml(file);
-    				if ( ret != null ) {
-    					for(Entry<String, BenchmarkResultItem> e : ret.entrySet()) {
-    						try {
-    						RTComponentItem rtcItem = new RTComponentItem(currentSystem);
-    						
-    	        			ecItem.setName(e.getKey());// TODO check ecowner
-    	        			ecItem.getResult().setCycle(e.getValue().cycle);
-    	        			
-    						rtcItem.setName(e.getKey());
-							rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
-    						rtcItem.setResult(e.getValue());
-    						currentSystem.members.add(rtcItem);
-    						ecItem.add(rtcItem);
-    						} catch (Exception ex){
-    							ex.printStackTrace();
-    						}
-    					}
-    				}
-    			}
-    			ecItem.calcSummation();
-			}
-        });*/
 
 		Tree tree = viewer.getTree();
 		tree.setLayoutData(new GridData(GridData.FILL_BOTH));
