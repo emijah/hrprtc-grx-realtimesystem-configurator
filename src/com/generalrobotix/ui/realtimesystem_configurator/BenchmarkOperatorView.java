@@ -1,6 +1,11 @@
 package com.generalrobotix.ui.realtimesystem_configurator;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.io.UnsupportedEncodingException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -9,10 +14,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.eclipse.core.resources.IFile;
 import org.eclipse.core.resources.IFolder;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.jface.action.Action;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.viewers.ISelection;
@@ -43,6 +51,7 @@ import org.eclipse.ui.ISelectionListener;
 import org.eclipse.ui.IWorkbenchPart;
 import org.eclipse.ui.part.ViewPart;
 import org.eclipse.ui.plugin.AbstractUIPlugin;
+import org.ho.yaml.Yaml;
 import org.omg.CosNaming.NamingContext;
 import org.openrtp.namespaces.rts.version02.DataportConnector;
 import org.openrtp.namespaces.rts.version02.TargetPort;
@@ -65,6 +74,7 @@ import com.generalrobotix.ui.util.GrxRTMUtil;
 public class BenchmarkOperatorView extends ViewPart {
 	private RTSystemItem onlineSystem;
 	private RTSystemItem currentSystem;
+	private TreeModelItem currentItem;
 	private List<RTC.ExecutionContext> onlineEcList;
 	private TreeViewer rtsViewer;
 	private Button btnUpdate;
@@ -72,6 +82,7 @@ public class BenchmarkOperatorView extends ViewPart {
 	private Combo cmbInterval_;
 	private Combo cmbRobotHost_;
 	private Text  text;
+	private NullProgressMonitor progress;
 	
     private static Color black_;
     private static Color red_;
@@ -142,6 +153,7 @@ public class BenchmarkOperatorView extends ViewPart {
 				if ( ((Button)e.getSource()).getSelection() ) {
 					Display display = Display.getCurrent();
 					if ( !display.isDisposed() ) {
+						resetLogAction();
 						display.timerExec(100, new UpdateLogThread());
 					}
 				}
@@ -196,7 +208,50 @@ public class BenchmarkOperatorView extends ViewPart {
 	        		List<?> sel = ((IStructuredSelection) selection).toList();
 	        		if ( sel.size() > 0 ) {
 	        			btnUpdate.setSelection(false);
-	        			currentSystem = null;
+	        
+	        			currentSystem = new RTSystemItem();
+	        			ExecutionContextItem ecItem = new ExecutionContextItem(currentSystem);
+						ecItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+						currentSystem.members.add(ecItem);
+						currentSystem.eclist.add(ecItem);
+						currentSystem.add(ecItem);
+ 
+	        			String filename = ((TreeModelItem) sel.get(0)).getName();
+	        			IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder("results");
+	        			if ( folder.findMember(filename, false) != null ) {
+	        				IFile file = folder.getFile(filename);
+	        				Map<String, BenchmarkResultItem> ret = fromYaml(file);
+	        				if ( ret != null ) {
+	        					for(Entry<String, BenchmarkResultItem> e : ret.entrySet()) {
+	        						try {
+	        						RTComponentItem rtcItem = new RTComponentItem(currentSystem);
+	        						
+	        	        			ecItem.setName(e.getKey());// TODO check ecowner
+	        	        			ecItem.getResult().setCycle(e.getValue().cycle);
+	        	        			
+	        						rtcItem.setName(e.getKey());
+	    							rtcItem.setState(RTComponentItem.RTC_BENCHMARK_AVAILABLE);
+	        						rtcItem.setResult(e.getValue());
+	        						currentSystem.members.add(rtcItem);
+	        						ecItem.add(rtcItem);
+	        						} catch (Exception ex){
+	        							ex.printStackTrace();
+	        						}
+	        					}
+
+	        					/*	        					
+	        					 Iterator<RTComponentItem> rtcs = currentSystem.getRTCMembers().iterator();
+	        					 while(rtcs.hasNext()) {
+	        						RTComponentItem rtc = rtcs.next();
+	        						rtc.setResult(ret.get(rtc.getId()));
+	        						double cycle = 1.0/rtc.getComponent().getExecutionContexts().get(0).getRate();
+	        						rtc.getResult().setCycle(cycle);
+	        					}
+	        					*/
+	        				}
+	        			}
+	        			ecItem.calcSummation();
+	        			/*
 	        			TreeModelItem item = (TreeModelItem) sel.get(0);
 	        			List<TreeModelItem> children = item.getChildren();
 	        			if ( children.size() > 0 && children.get(0) instanceof RTSystemItem ) {
@@ -210,12 +265,12 @@ public class BenchmarkOperatorView extends ViewPart {
 	        						break;
 	        					}
 	        				}
-	        			}
-	        			if ( currentSystem != null ) {
+	        			}*/
+	        			//if ( currentSystem != null ) {
 	        				rtsViewer.setInput(currentSystem);
-	        				text.setText(currentSystem.getId());
+	        				text.setText(filename);
 	        				rtsViewer.expandAll();
-	        			}
+	        			//}
 	        		}
 	            }
 	        }
@@ -223,6 +278,30 @@ public class BenchmarkOperatorView extends ViewPart {
 		
 		getSite().setSelectionProvider(rtsViewer);
 	}
+	
+    private Map<String, BenchmarkResultItem> fromYaml(IFile file)
+    {
+    	if ( file == null || !file.exists() || file.isPhantom() ) {
+    		return null;
+    	}
+    	Reader reader = null;
+        try {
+            reader = new BufferedReader(new InputStreamReader(file.getContents(), "UTF-8"));
+            Object yaml = Yaml.load(reader);
+            return (Map<String, BenchmarkResultItem>)yaml;
+        } catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		} catch (CoreException e) {
+			e.printStackTrace();
+		} finally {
+        	try {
+				reader.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+        }
+        return null;
+    }
 
 	@Override
 	public void setFocus()
@@ -698,7 +777,15 @@ public class BenchmarkOperatorView extends ViewPart {
 	
 	private void save()
 	{
-		IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder(currentSystem.getId()+"/results");
+		//IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder(currentSystem.getId()+"/results");
+		IFolder folder = BenchmarkResultExplorer.getInstance().getProject().getFolder("results");
+		if ( !folder.exists() ) {
+			try {
+				folder.create(true, true, progress);
+			} catch (CoreException e) {
+				e.printStackTrace();
+			}
+		}
 		IFile   file = folder.getFile(FORMAT_DATE2.format(new Date())+".yaml");
 		try {
 			if ( !file.exists() ) {

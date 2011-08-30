@@ -168,31 +168,48 @@ public class BenchmarkResultExplorer extends ViewPart
 	public void updateList() 
 	{
 		rootItem.removeChildren();
+		IFolder folder = project.getFolder("results");
+		try {
+			IResource[] members = folder.members();
+			for (int j=0; j<members.length; j++ ) {
+				if ( members[j].getType() == IResource.FILE && members[j].getName().endsWith(".yaml") ) {
+					TreeModelItem item = new TreeModelItem(members[j].getName());
+					item.setPropertyValue("resource", members[j]);
+					rootItem.add(item);
+					members[j].refreshLocal(1, progress);
+				}
+			}
+			folder.refreshLocal(2, progress);
+		} catch (CoreException e) {
+			e.printStackTrace();
+		}
+		/*
 		File[] files = project.getLocation().toFile().listFiles();
 		for (int i=0; files != null && i<files.length; i++) {
 			if ( files[i].isDirectory() ) {
 				File[] systemprofiles = files[i].listFiles(new FilenameFilter(){
 					public boolean accept(File file, String name)
 					{
-						return ( name.endsWith(".xml") );
+						return ( name.endsWith(".yaml") );
 					}
 				});
 				
 				if ( systemprofiles.length > 0 ) {
-					RTSystemItem system = new RTSystemItem(systemprofiles[0].getAbsolutePath());
-					TreeModelItem systemRoot = new TreeModelItem(system.getId());
-					systemRoot.add(system);
-					TreeModelItem resultRoot = new TreeModelItem("ResultRoot");
-					systemRoot.add(resultRoot);
-					rootItem.add(systemRoot);
-					IFolder folder = project.getFolder(system.getId()+"/results");
+					//RTSystemItem system = new RTSystemItem(systemprofiles[0].getAbsolutePath());
+					//TreeModelItem systemRoot = new TreeModelItem(system.getId());
+					//systemRoot.add(system);
+					//TreeModelItem resultRoot = new TreeModelItem("ResultRoot");
+					//systemRoot.add(resultRoot);
+					//rootItem.add(systemRoot);
+					//rootItem.add(resultRoot);
+					IFolder folder = project.getFolder("results");
 					try {
 						IResource[] members = folder.members();
 						for (int j=0; j<members.length; j++ ) {
 							if ( members[j].getType() == IResource.FILE && members[j].getName().endsWith(".yaml") ) {
 								TreeModelItem item = new TreeModelItem(members[j].getName());
 								item.setPropertyValue("resource", members[j]);
-								resultRoot.add(item);
+								rootItem.add(item);
 							}
 						}
 					} catch (CoreException e) {
@@ -201,7 +218,7 @@ public class BenchmarkResultExplorer extends ViewPart
 					
 				}
 			}
-		}
+		}*/
 		resultViewer.refresh();
 		resultViewer.expandAll();
 	}
@@ -228,7 +245,7 @@ public class BenchmarkResultExplorer extends ViewPart
       	String filename = item.getName();
 		// load result
 		try {
-			IFolder folder = project.getFolder(system.getId()+"/results");
+			IFolder folder = project.getFolder("results");
 			if ( folder.findMember(filename, false) != null ) {
 				IFile file = folder.getFile(filename);
 				Map<String, BenchmarkResultItem> ret = fromYaml(file);
@@ -350,9 +367,9 @@ public class BenchmarkResultExplorer extends ViewPart
 		public Object[] getChildren(Object parentElement)
 		{
 			TreeModelItem item = (TreeModelItem)parentElement;
-			if ( item.getParent() == rootItem ) {
-				return item.find("ResultRoot").getChildren().toArray();
-			}
+			//if ( item.getParent() == rootItem ) {
+				//return item.find("ResultRoot").getChildren().toArray();
+			//}
 		    return item.getChildren().toArray();
 		}
 		
@@ -436,11 +453,11 @@ public class BenchmarkResultExplorer extends ViewPart
             public void doubleClick(DoubleClickEvent event)
             {
                 TreeModelItem item = (TreeModelItem)((TreeSelection)event.getSelection()).getFirstElement();
-                if ( item.getParent() == rootItem ) {
+                //if ( item.getParent() == rootItem ) {
                 	
-                } else if ( loadResult(item) ) {
+                //} else if ( loadResult(item) ) {
           			resultViewer.setSelection(new StructuredSelection(item));
-                }
+                //}
             }
         });
 
@@ -460,7 +477,7 @@ public class BenchmarkResultExplorer extends ViewPart
 				rootItem.add(rts);
 				
 				// create a directory & copy the system profile
-				IFolder rtsTopFolder = project.getFolder(rts.getId());
+				IFolder rtsTopFolder = project.getFolder("result");
 				if ( !rtsTopFolder.exists() ) {
 					rtsTopFolder.create(true, true, progress);
 				}
