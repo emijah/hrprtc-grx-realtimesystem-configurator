@@ -236,18 +236,19 @@ public class TimingChartView extends ViewPart
 	synchronized public void updateCharts(RTSystemItem system)
 	{
 		try {
-		Iterator<ExecutionContextItem> checkedItems = system.getExecutionContexts().iterator();
-		int index = 0;
-		isOffsetUpdated = false;
-		offset = 0;
-		while ( checkedItems.hasNext() ) {
-			TreeModelItem item = checkedItems.next();
-			updateChart((ExecutionContextItem)item, index++, false);
-		}
-		updateChart(null, index, false);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+			Iterator<ExecutionContextItem> checkedItems = system.getExecutionContexts().iterator();
+			int index = 0;
+			isOffsetUpdated = false;
+			offset = 0;
+			while ( checkedItems.hasNext() ) {
+				TreeModelItem item = checkedItems.next();
+				updateChart((ExecutionContextItem)item, index++, false);
+			}
+			updateChart(null, index, false);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		selectedItem_ = system;
 	}
 	
 	private void updateChart(ExecutionContextItem item, int index, boolean isSelected)
