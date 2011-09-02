@@ -77,16 +77,19 @@ public class BenchmarkResultItem extends TreeModelItem
 		
 		lastLog_.clear();
 		double sum = 0;
+		double t_prev = 0;
 		for (int i=0; i<log.length; i++) {
 			double t1   = log[i].begin.sec + log[i].begin.nsec*1.0e-9;
+			if (t1 <= t_prev)
+				break;
+			t_prev = t1;
 			double diff = log[i].end.sec   + log[i].end.nsec*1.0e-9 - t1;
-			//max = Math.max(max, diff);
 			sum += diff;
 			lastLog_.add(t1);
 			lastLog_.add(diff);
 		}
 		mean = (mean*count + sum)/(count + log.length);
-		count += log.length;
+		count += lastLog_.size()/2;
 		date   = new Date();
 		updateProperties();
 	}
