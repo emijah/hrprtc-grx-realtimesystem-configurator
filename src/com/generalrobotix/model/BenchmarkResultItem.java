@@ -88,7 +88,7 @@ public class BenchmarkResultItem extends TreeModelItem
 			lastLog_.add(t1);
 			lastLog_.add(diff);
 		}
-		mean = (mean*count + sum)/(count + log.length);
+		mean = (mean*count + sum)/(count + lastLog_.size()/2);
 		count += lastLog_.size()/2;
 		date   = new Date();
 		updateProperties();
